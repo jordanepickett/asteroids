@@ -21,6 +21,7 @@ struct RenderCommandClear {
 
 struct RenderCommandDrawTriangles {
     RenderCommandHeader header;
+    glm::vec2 pos;
     glm::mat4 mvp;
     int vertexCount;
     const void* vertices;

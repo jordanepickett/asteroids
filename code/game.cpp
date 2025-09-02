@@ -20,7 +20,7 @@ inline void PushText(MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const c
     memcpy(dst, str, len + 1);
 }
 
-inline void PushTrianges(MemoryArena *memory, Vertex *verts, int vertexCount) {
+inline void PushTrianges(GameState *state, MemoryArena *memory, Vertex *verts, int vertexCount) {
 
     //glm::mat4 mvp = state->camera.projection * state->camera.view;
     //glm::mat4 proj = glm::ortho(-platform->ratio, platform->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
@@ -30,6 +30,7 @@ inline void PushTrianges(MemoryArena *memory, Vertex *verts, int vertexCount) {
     drawCmd->header.size = (uint32_t)size;
     //drawCmd->mvp = mvp;
     drawCmd->vertexCount = 3;
+    drawCmd->pos = state->playPos;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
     memcpy(dst, verts, 3 * sizeof(Vertex));
 }
@@ -59,15 +60,19 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
     }
     if(frame->input.controllers[0].moveDown.endedDown) {
         printf("Move Down. \n");
+        state->playPos[1] -= 0.02f;
     }
     if(frame->input.controllers[0].moveUp.endedDown) {
         printf("Move Up. \n");
+        state->playPos[1] += 0.02f;
     }
     if(frame->input.controllers[0].moveLeft.endedDown) {
         printf("Move Left. \n");
+        state->playPos[0] -= 0.02f;
     }
     if(frame->input.controllers[0].moveRight.endedDown) {
         printf("Move Right. \n");
+        state->playPos[0] += 0.02f;
     }
 
 }
@@ -88,7 +93,7 @@ void GameRender(GameState *state, PlatformMemory *memory) {
     };
     //glm::mat4 mvp = state->camera.projection * state->camera.view;
     //glm::mat4 proj = glm::ortho(-platform->ratio, platform->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
-    PushTrianges(&memory->transient, verts, 3);
+    PushTrianges(state, &memory->transient, verts, 3);
 
     // TODO: Text
     //PushText(&memory->transient, {20, 20}, {1,1,1,1}, "Health: 100");
