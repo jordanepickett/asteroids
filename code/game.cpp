@@ -57,7 +57,18 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
     if(frame->input.controllers[0].actionDown.endedDown) {
         printf("A Button Pressed. \n");
     }
-    printf("%i \n", (int)(4.0f*(frame->input.controllers[0].stickAverageX)));
+    if(frame->input.controllers[0].moveDown.endedDown) {
+        printf("Move Down. \n");
+    }
+    if(frame->input.controllers[0].moveUp.endedDown) {
+        printf("Move Up. \n");
+    }
+    if(frame->input.controllers[0].moveLeft.endedDown) {
+        printf("Move Left. \n");
+    }
+    if(frame->input.controllers[0].moveRight.endedDown) {
+        printf("Move Right. \n");
+    }
 
 }
 

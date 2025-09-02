@@ -139,8 +139,11 @@ void PlatformRunGameLoop(PlatformAPI *api,
         lastFrameTime = currentFrameTime;
 
         frame.deltaTime = deltaTime;
+
+        //TODO Keyboard input
         GLFWgamepadstate state;
         if(glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
+            //TODO Temp getting first controller
             ControllerInput *oldController = &frame.input.controllers[0];
             ControllerInput *newController = &frame.input.controllers[0];
 
@@ -155,20 +158,19 @@ void PlatformRunGameLoop(PlatformAPI *api,
             );
             ProcessInputDigitalButton(
                 (newController->stickAverageX > threshold) ? 1 : 0,
-                &oldController->moveLeft,
-                &newController->moveLeft
+                &oldController->moveRight,
+                &newController->moveRight
             );
             ProcessInputDigitalButton(
                 (newController->stickAverageY < -threshold) ? 1 : 0,
-                &oldController->moveLeft,
-                &newController->moveLeft
+                &oldController->moveUp,
+                &newController->moveUp
             );
             ProcessInputDigitalButton(
                 (newController->stickAverageY > threshold) ? 1 : 0,
-                &oldController->moveLeft,
-                &newController->moveLeft
+                &oldController->moveDown,
+                &newController->moveDown
             );
-
 
             ProcessInputDigitalButton(
                 state.buttons[GLFW_GAMEPAD_BUTTON_A],
