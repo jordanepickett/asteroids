@@ -1,8 +1,11 @@
 #pragma once
 
 #include "memory.h"
+#include "platform_input.h"
 #include <glm/glm.hpp>
 #include <glad/glad.h>
+
+#define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
 struct PlatformRenderer {
     GLuint vertexBuffer, vertexShader, fragmentShader, program, vao;
@@ -18,7 +21,7 @@ struct PlatformMemory {
 
 struct PlatformFrame {
     float deltaTime;
-
+    GameInput input;
 };
 
 struct PlatformAPI {

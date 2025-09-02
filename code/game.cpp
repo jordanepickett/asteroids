@@ -2,6 +2,7 @@
 #include "memory.h"
 #include "platform.h"
 #include "render_commands.h"
+#include <cstdio>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
@@ -53,6 +54,10 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
+    if(frame->input.controllers[0].actionDown.endedDown) {
+        printf("A Button Pressed. \n");
+    }
+    printf("%i \n", (int)(4.0f*(frame->input.controllers[0].stickAverageX)));
 
 }
 

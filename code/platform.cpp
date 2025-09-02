@@ -11,13 +11,32 @@ static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, i
         glfwSetWindowShouldClose(window, GLFW_TRUE);
 }
 
+static void ProcessInputDigitalButton(
+    unsigned char buttonState,
+    ButtonState *oldState,
+    ButtonState *newState
+) {
+
+    newState->endedDown = buttonState == GLFW_PRESS;
+    newState->halfTransitionCount = (oldState->endedDown != newState->endedDown) ? 1 : 0;
+}
+
+static float ApplyDeadzone(float value, float deadzone) {
+    if (fabs(value) < deadzone) {
+        return 0.0f;
+    }
+
+    float sign = (value > 0) ? 1.0f : -1.0f;
+    float adjusted = (fabs(value) - deadzone) / (1.0f - deadzone);
+    return adjusted * sign;
+}
+
 void PlatformInit(PlatformRenderer *renderer, const char* vertexShaderText, const char* fragmentShaderText) {
 
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         // Error handling
         return;
     }
-
 
     glGenBuffers(1, &renderer->vertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexBuffer);
@@ -107,6 +126,10 @@ void PlatformRunGameLoop(PlatformAPI *api,
 
     double lastFrameTime = 0.0;
 
+    GameInput input[2] = {};
+    GameInput *newInput = &input[0];
+    GameInput *oldInput = &input[1];
+
     while(!glfwWindowShouldClose(window)) {
         ArenaReset(&memory.transient);
 
@@ -116,6 +139,77 @@ void PlatformRunGameLoop(PlatformAPI *api,
         lastFrameTime = currentFrameTime;
 
         frame.deltaTime = deltaTime;
+        GLFWgamepadstate state;
+        if(glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
+            ControllerInput *oldController = &frame.input.controllers[0];
+            ControllerInput *newController = &frame.input.controllers[0];
+
+            newController->stickAverageX = ApplyDeadzone(state.axes[GLFW_GAMEPAD_AXIS_LEFT_X], 0.25f);
+            newController->stickAverageY = ApplyDeadzone(state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y], 0.25f);
+
+            float threshold = 0.5f;
+            ProcessInputDigitalButton(
+                (newController->stickAverageX < -threshold) ? 1 : 0,
+                &oldController->moveLeft,
+                &newController->moveLeft
+            );
+            ProcessInputDigitalButton(
+                (newController->stickAverageX > threshold) ? 1 : 0,
+                &oldController->moveLeft,
+                &newController->moveLeft
+            );
+            ProcessInputDigitalButton(
+                (newController->stickAverageY < -threshold) ? 1 : 0,
+                &oldController->moveLeft,
+                &newController->moveLeft
+            );
+            ProcessInputDigitalButton(
+                (newController->stickAverageY > threshold) ? 1 : 0,
+                &oldController->moveLeft,
+                &newController->moveLeft
+            );
+
+
+            ProcessInputDigitalButton(
+                state.buttons[GLFW_GAMEPAD_BUTTON_A],
+                &oldController->actionDown,
+                &newController->actionDown
+            );
+            ProcessInputDigitalButton(
+                state.buttons[GLFW_GAMEPAD_BUTTON_B],
+                &oldController->actionRight,
+                &newController->actionRight
+            );
+            ProcessInputDigitalButton(
+                state.buttons[GLFW_GAMEPAD_BUTTON_Y],
+                &oldController->actionUp,
+                &newController->actionUp
+            );
+            ProcessInputDigitalButton(
+                state.buttons[GLFW_GAMEPAD_BUTTON_X],
+                &oldController->actionLeft,
+                &newController->actionLeft
+            );
+            ProcessInputDigitalButton(
+                state.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER],
+                &oldController->rightShoulder,
+                &newController->rightShoulder
+            );
+            ProcessInputDigitalButton(
+                state.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER],
+                &oldController->leftShoulder,
+                &newController->leftShoulder
+            );
+
+            //lx = applyDeadzone(state.axes[GLFW_GAMEPAD_AXIS_LEFT_X], 0.25f);
+            //ly = applyDeadzone(state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y], 0.25f);
+
+            //vec2 inputAxis = {lx, ly};
+
+            //player.targetVelocity[0] = inputAxis[0] * player.maxSpeed;
+            //player.targetVelocity[1] = inputAxis[1] * player.maxSpeed;
+
+        }
 
         glfwGetFramebufferSize(window, &renderer->width, &renderer->height);
         renderer->ratio = renderer->width / (float) renderer->height;
@@ -124,6 +218,10 @@ void PlatformRunGameLoop(PlatformAPI *api,
         GameRender(&game, &memory);
 
         PlatformRender(renderer, game.commands, game.renderCommandsCount);
+
+        GameInput *temp = newInput;
+        newInput = oldInput;
+        oldInput = temp;
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -183,3 +281,5 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
         ptr += header->size; // move to next command
     }
 }
+
+
