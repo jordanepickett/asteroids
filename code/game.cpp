@@ -6,6 +6,7 @@
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
+#include <glm/gtc/type_ptr.hpp>
 
 inline void PushText(MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* str) {
     size_t len = strlen(str);
@@ -20,15 +21,19 @@ inline void PushText(MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const c
     memcpy(dst, str, len + 1);
 }
 
-inline void PushTrianges(GameState *state, MemoryArena *memory, Vertex *verts, int vertexCount) {
+inline void PushTrianges(
+    GameState *state,
+    MemoryArena *memory,
+    Vertex *verts,
+    int vertexCount
+) {
 
-    //glm::mat4 mvp = state->camera.projection * state->camera.view;
-    //glm::mat4 proj = glm::ortho(-platform->ratio, platform->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
+    glm::mat4 mvp = state->camera.projection * state->camera.view;
     size_t size = sizeof(RenderCommandDrawTriangles) + 3 * sizeof(Vertex); // assuming simple 2D verts
     auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
     drawCmd->header.type = RENDER_CMD_DRAW_TRIANGLES;
     drawCmd->header.size = (uint32_t)size;
-    //drawCmd->mvp = mvp;
+    drawCmd->mvp = mvp;
     drawCmd->vertexCount = 3;
     drawCmd->pos = state->playPos;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
@@ -36,22 +41,22 @@ inline void PushTrianges(GameState *state, MemoryArena *memory, Vertex *verts, i
 }
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
-    float left   = -100.0f;
-    float right  =  100.0f;
-    float bottom = -100.0f;
-    float top    =  100.0f;
+    float left   = -20.0f;
+    float right  =  20.0f;
+    float bottom = -20.0f;
+    float top    =  20.0f;
     float nearZ  = -1.0f;
     float farZ   =  1.0f;
 
-    //state->camera.projection = glm::ortho(left, right, bottom, top, nearZ, farZ);
+    state->camera.projection = glm::ortho(left, right, bottom, top, nearZ, farZ);
 
     // Place camera at z=1 looking at the origin
     state->camera.position = glm::vec3(0.0f, 0.0f, 1.0f);
-    //state->camera.view = glm::lookAt(
-    //    state->camera.position,             // eye
-    //    glm::vec3(0.0f, 0.0f, 0.0f),        // target
-    //    glm::vec3(0.0f, 1.0f, 0.0f)         // up
-    //);
+    state->camera.view = glm::lookAt(
+        state->camera.position,             // eye
+        glm::vec3(0.0f, 0.0f, 0.0f),        // target
+        glm::vec3(0.0f, 1.0f, 0.0f)         // up
+    );
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -87,12 +92,10 @@ void GameRender(GameState *state, PlatformMemory *memory) {
     cmd->color = {0.f, 0.f, 0.f};
 
     Vertex verts[3] = {
-        {{ 0.0f,  0.2f}, {1.f, 0.f, 0.f}},
-        {{-0.2f, -0.2f}, {0.f, 1.f, 0.f}},
-        {{ 0.2f, -0.2f}, {0.f, 0.f, 1.f}},
+        {{ 0.0f,  1.0f}, {1.f, 0.f, 0.f}},
+        {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+        {{ 1.0f, -1.0f}, {0.f, 0.f, 1.f}},
     };
-    //glm::mat4 mvp = state->camera.projection * state->camera.view;
-    //glm::mat4 proj = glm::ortho(-platform->ratio, platform->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
     PushTrianges(state, &memory->transient, verts, 3);
 
     // TODO: Text

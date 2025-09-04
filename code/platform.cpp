@@ -257,8 +257,8 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
                 glm::mat4 model = glm::mat4(1.0f);
                 model = glm::translate(model, glm::vec3(d->pos.x, d->pos.y, 0.0f));
                 model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
-                glm::mat4 proj = glm::ortho(-renderer->ratio, renderer->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
-                glm::mat4 mvp = proj * model;
+                //glm::mat4 proj = glm::ortho(-renderer->ratio, renderer->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
+                glm::mat4 mvp = d->mvp * model;
 
                 glUseProgram(renderer->program);
                 glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexBuffer);
