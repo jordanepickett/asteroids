@@ -6,6 +6,7 @@
 enum RenderCommandType {
     RENDER_CMD_CLEAR,
     RENDER_CMD_DRAW_TRIANGLES,
+    RENDER_CMD_DRAW_LOOP,
     RENDER_CMD_DRAW_TEXT
 };
 

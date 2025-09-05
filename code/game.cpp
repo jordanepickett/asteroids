@@ -40,6 +40,36 @@ inline void PushTrianges(
     memcpy(dst, verts, 3 * sizeof(Vertex));
 }
 
+inline void PushLoop(
+    GameState *state,
+    MemoryArena *memory,
+    Vertex *verts,
+    int vertexCount
+) {
+
+    glm::mat4 mvp = state->camera.projection * state->camera.view;
+    size_t size = sizeof(RenderCommandDrawTriangles) + 4 * sizeof(Vertex); // assuming simple 2D verts
+    auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
+    drawCmd->header.type = RENDER_CMD_DRAW_LOOP;
+    drawCmd->header.size = (uint32_t)size;
+    drawCmd->mvp = mvp;
+    drawCmd->vertexCount = 4;
+    drawCmd->pos = state->playPos;
+    void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
+    memcpy(dst, verts, 4 * sizeof(Vertex));
+}
+
+inline void UpdateCamera(GameState *state) {
+    if(!state->camera.isLocked) {
+        state->camera.position = glm::vec3(state->playPos.x, state->playPos.y, 1.0f);
+        state->camera.view = glm::lookAt(
+            state->camera.position,             // eye
+            glm::vec3(state->playPos.x, state->playPos.y, 0.0f),        // target
+            glm::vec3(0.0f, 1.0f, 0.0f)         // up
+        );
+    }
+}
+
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     float left   = -20.0f;
     float right  =  20.0f;
@@ -57,6 +87,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
         glm::vec3(0.0f, 0.0f, 0.0f),        // target
         glm::vec3(0.0f, 1.0f, 0.0f)         // up
     );
+    state->camera.isLocked = true;
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -64,21 +95,19 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
         printf("A Button Pressed. \n");
     }
     if(frame->input.controllers[0].moveDown.endedDown) {
-        printf("Move Down. \n");
-        state->playPos[1] -= 0.02f;
+        state->playPos.y -= 0.02f;
     }
     if(frame->input.controllers[0].moveUp.endedDown) {
-        printf("Move Up. \n");
-        state->playPos[1] += 0.02f;
+        state->playPos.y += 0.02f;
     }
     if(frame->input.controllers[0].moveLeft.endedDown) {
-        printf("Move Left. \n");
-        state->playPos[0] -= 0.02f;
+        state->playPos.x -= 0.02f;
     }
     if(frame->input.controllers[0].moveRight.endedDown) {
-        printf("Move Right. \n");
-        state->playPos[0] += 0.02f;
+        state->playPos.x += 0.02f;
     }
+    //printf("X: %f. \n", state->playPos.x);
+    //printf("Y: %f. \n", state->playPos.y);
 
 }
 
@@ -91,12 +120,24 @@ void GameRender(GameState *state, PlatformMemory *memory) {
     cmd->header.size = sizeof(RenderCommandClear);
     cmd->color = {0.f, 0.f, 0.f};
 
-    Vertex verts[3] = {
-        {{ 0.0f,  1.0f}, {1.f, 0.f, 0.f}},
-        {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-        {{ 1.0f, -1.0f}, {0.f, 0.f, 1.f}},
-    };
-    PushTrianges(state, &memory->transient, verts, 3);
+    {
+        Vertex verts[3] = {
+            {{ 0.0f,  1.0f}, {1.f, 0.f, 0.f}},
+            {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+            {{ 1.0f, -1.0f}, {0.f, 0.f, 1.f}},
+        };
+        PushTrianges(state, &memory->transient, verts, 3);
+    }
+
+    {
+        Vertex verts[4] = {
+            {{ 0.0f,  0.0f}, {1.f, 0.f, 0.f}},
+            {{ 0.0f, -1.0f}, {0.f, 1.f, 0.f}},
+            {{ 1.0f, -1.0f}, {0.f, 0.f, 1.f}},
+            {{ 1.0f,  0.0f}, {0.f, 0.f, 1.f}},
+        };
+        PushLoop(state, &memory->transient, verts, 4);
+    }
 
     // TODO: Text
     //PushText(&memory->transient, {20, 20}, {1,1,1,1}, "Health: 100");

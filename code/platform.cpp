@@ -271,6 +271,27 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
 
                 glBindVertexArray(0);
             } break;
+            case RENDER_CMD_DRAW_LOOP: {
+
+                auto* d = (RenderCommandDrawTriangles*)ptr;
+                void* verts = (uint8_t*)d + sizeof(RenderCommandDrawTriangles);
+                glm::mat4 model = glm::mat4(1.0f);
+                model = glm::translate(model, glm::vec3(0.0f, 0.0f, 0.0f));
+                //model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
+                //glm::mat4 proj = glm::ortho(-renderer->ratio, renderer->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
+                glm::mat4 mvp = d->mvp * model;
+
+                glUseProgram(renderer->program);
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexBuffer);
+
+                glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
+                glUniformMatrix4fv(renderer->mvpLocation, 1, GL_FALSE, (const GLfloat*)&mvp);
+
+                glBindVertexArray(renderer->vao);
+                glDrawArrays(GL_LINE_LOOP, 0, d->vertexCount);
+
+                glBindVertexArray(0);
+            } break;
             case RENDER_CMD_DRAW_TEXT: {
                 /*
                 auto* t = (RenderCommandDrawText*)ptr;
