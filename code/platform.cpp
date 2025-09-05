@@ -3,6 +3,7 @@
 #include "render_commands.h"
 #include "platform.h"
 #include <GLFW/glfw3.h>
+#include <cstdio>
 #include <glm/gtc/type_ptr.hpp>
 
 static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
@@ -255,11 +256,11 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
                 auto* d = (RenderCommandDrawTriangles*)ptr;
                 void* verts = (uint8_t*)d + sizeof(RenderCommandDrawTriangles);
                 glm::mat4 model = glm::mat4(1.0f);
-                model = glm::translate(model, glm::vec3(d->pos.x, d->pos.y, 0.0f));
+                model = glm::translate(model, glm::vec3(-d->pos.x, d->pos.y, 0.0f));
                 //model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
                 glm::vec2 right(d->rotation.y, -d->rotation.x);  // perpendicular vector
-                //model[0][0] = right.x;  model[1][0] = right.y;
-                //model[0][1] = d->rotation.x; model[1][1] = d->rotation.y;
+                model[0][0] = right.x;  model[1][0] = right.y;
+                model[0][1] = d->rotation.x; model[1][1] = d->rotation.y;
                 //glm::mat4 proj = glm::ortho(-renderer->ratio, renderer->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
                 glm::mat4 mvp = d->mvp * model;
 

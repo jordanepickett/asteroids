@@ -36,6 +36,7 @@ inline void PushTrianges(
     drawCmd->mvp = mvp;
     drawCmd->vertexCount = 3;
     drawCmd->pos = state->player.pos;
+    drawCmd->rotation = state->player.rotation;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
     memcpy(dst, verts, 3 * sizeof(Vertex));
 }
@@ -53,7 +54,6 @@ inline void PushLoop(
     drawCmd->header.type = RENDER_CMD_DRAW_LOOP;
     drawCmd->header.size = (uint32_t)size;
     drawCmd->pos = state->player.pos;
-    drawCmd->rotation = state->player.rotation;
     drawCmd->mvp = mvp;
     drawCmd->vertexCount = 4;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
@@ -124,25 +124,23 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
 
     float rotSpeed  = 0.02f;
 
-    float acceleration = 0.0002f; // thrust strength
-    float maxSpeed     = 0.2f;  // max velocity
+    float acceleration = 0.002f; // thrust strength
+    float maxSpeed     = 3.0f;  // max velocity
     float damping      = 0.98f;
     float rotLerp   = 0.15f;
 
-    // Per-frame input
     glm::vec2 input(lx, ly);
 
-    if (glm::length(input) > 0.15f) {
-        // Normalize stick input
-        input = glm::normalize(input);
+    // Correct Y axis (gamepad up is usually negative)
+    input.y = -input.y;
+    input.x = -input.x;
 
-        // Correct Y axis (gamepad up is usually negative)
-        input.y = -input.y;
-        input.x = -input.x;
-
-        // Smoothly rotate facing vector toward input
+    // Smoothly rotate facing vector toward input
+    if(glm::length(input) > 0.0f) {
         state->player.rotation = glm::normalize(glm::mix(state->player.rotation, input, rotLerp));
     }
+    //printf("Stick Y: %f \n", input.y);
+    printf("Player Y: %f \n", state->player.rotation.y);
 
     if(rightBurst) {
         state->player.velocity += state->player.rotation * acceleration;
@@ -155,8 +153,6 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
     state->player.velocity *= damping;
 
     state->player.pos += state->player.velocity;
-    printf("Vel: %f %f \n", state->player.velocity.x, state->player.velocity.y);
-    //printf("Pos: %f %f \n", state->player.pos.x, state->player.pos.y);
 
     //glm::mat4 model = glm::mat4(1.0f); // identity
     //model = glm::translate(model, glm::vec3(-state->player.pos.x, state->player->pos.y, 0.0f));
@@ -179,9 +175,9 @@ void GameRender(GameState *state, PlatformMemory *memory) {
 
     {
         Vertex verts[3] = {
-            {{ 0.0f,  1.0f}, {1.f, 0.f, 0.f}},
+            {{ 0.0f,  1.0f}, {0.f, 1.f, 0.f}},
             {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-            {{ 1.0f, -1.0f}, {0.f, 0.f, 1.f}},
+            {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
         };
         PushTrianges(state, &memory->transient, verts, 3);
     }
