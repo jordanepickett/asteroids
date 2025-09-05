@@ -9,13 +9,18 @@ struct Camera {
     bool isLocked;
 };
 
-struct GameState {
-    glm::vec2 playPos;
+struct Player {
+    glm::vec2 pos;
+    glm::vec2 rotation;
     glm::vec2 velocity;
+};
+
+struct GameState {
     GLuint vao;
 
     void* commands;
     int renderCommandsCount;
+    Player player;
     Camera camera;
 };
 

@@ -35,7 +35,7 @@ inline void PushTrianges(
     drawCmd->header.size = (uint32_t)size;
     drawCmd->mvp = mvp;
     drawCmd->vertexCount = 3;
-    drawCmd->pos = state->playPos;
+    drawCmd->pos = state->player.pos;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
     memcpy(dst, verts, 3 * sizeof(Vertex));
 }
@@ -52,19 +52,20 @@ inline void PushLoop(
     auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
     drawCmd->header.type = RENDER_CMD_DRAW_LOOP;
     drawCmd->header.size = (uint32_t)size;
+    drawCmd->pos = state->player.pos;
+    drawCmd->rotation = state->player.rotation;
     drawCmd->mvp = mvp;
     drawCmd->vertexCount = 4;
-    drawCmd->pos = state->playPos;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
     memcpy(dst, verts, 4 * sizeof(Vertex));
 }
 
 inline void UpdateCamera(GameState *state) {
     if(!state->camera.isLocked) {
-        state->camera.position = glm::vec3(state->playPos.x, state->playPos.y, 1.0f);
+        state->camera.position = glm::vec3(state->player.pos.x, state->player.pos.y, 1.0f);
         state->camera.view = glm::lookAt(
             state->camera.position,             // eye
-            glm::vec3(state->playPos.x, state->playPos.y, 0.0f),        // target
+            glm::vec3(state->player.pos.x, state->player.pos.y, 0.0f),        // target
             glm::vec3(0.0f, 1.0f, 0.0f)         // up
         );
     }
@@ -88,26 +89,82 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
         glm::vec3(0.0f, 1.0f, 0.0f)         // up
     );
     state->camera.isLocked = true;
+    state->player.rotation = glm::vec2(0.0f, 1.0f);
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
+    float rightBurst = 0;
+    float leftBurst = 0;
+    float lx = 0;
+    float ly = 0;
     if(frame->input.controllers[0].actionDown.endedDown) {
         printf("A Button Pressed. \n");
+        rightBurst = 1;
+    } else {
+        rightBurst = 0;
     }
     if(frame->input.controllers[0].moveDown.endedDown) {
-        state->playPos.y -= 0.02f;
+        //state->player.pos.y -= 0.02f;
     }
     if(frame->input.controllers[0].moveUp.endedDown) {
-        state->playPos.y += 0.02f;
+        //state->player.pos.y += 0.02f;
     }
     if(frame->input.controllers[0].moveLeft.endedDown) {
-        state->playPos.x -= 0.02f;
+        //state->player.pos.x -= 0.02f;
     }
     if(frame->input.controllers[0].moveRight.endedDown) {
-        state->playPos.x += 0.02f;
+        //state->player.pos.x += 0.02f;
     }
+    
+    lx = frame->input.controllers[0].stickAverageX;
+    ly = frame->input.controllers[0].stickAverageY;
     //printf("X: %f. \n", state->playPos.x);
     //printf("Y: %f. \n", state->playPos.y);
+
+
+    float rotSpeed  = 0.02f;
+
+    float acceleration = 0.0002f; // thrust strength
+    float maxSpeed     = 0.2f;  // max velocity
+    float damping      = 0.98f;
+    float rotLerp   = 0.15f;
+
+    // Per-frame input
+    glm::vec2 input(lx, ly);
+
+    if (glm::length(input) > 0.15f) {
+        // Normalize stick input
+        input = glm::normalize(input);
+
+        // Correct Y axis (gamepad up is usually negative)
+        input.y = -input.y;
+        input.x = -input.x;
+
+        // Smoothly rotate facing vector toward input
+        state->player.rotation = glm::normalize(glm::mix(state->player.rotation, input, rotLerp));
+    }
+
+    if(rightBurst) {
+        state->player.velocity += state->player.rotation * acceleration;
+    }
+
+    if (glm::length(state->player.velocity) > maxSpeed) {
+        state->player.velocity = glm::normalize(state->player.velocity) * maxSpeed;
+    }
+
+    state->player.velocity *= damping;
+
+    state->player.pos += state->player.velocity;
+    printf("Vel: %f %f \n", state->player.velocity.x, state->player.velocity.y);
+    //printf("Pos: %f %f \n", state->player.pos.x, state->player.pos.y);
+
+    //glm::mat4 model = glm::mat4(1.0f); // identity
+    //model = glm::translate(model, glm::vec3(-state->player.pos.x, state->player->pos.y, 0.0f));
+
+    //glm::vec2 right(state->player.rotation.y, -state->player.rotation.x);  // perpendicular vector
+    //model[0][0] = right.x;  model[1][0] = right.y;
+    //model[0][1] = facing.x; model[1][1] = facing.y;
+    //model = glm::rotate(model, test, glm::vec3(0.0f, 0.0f, 1.0f));
 
 }
 
