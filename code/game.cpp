@@ -62,13 +62,26 @@ inline void PushLoop(
 
 inline void UpdateCamera(GameState *state) {
     if(!state->camera.isLocked) {
-        state->camera.position = glm::vec3(state->player.pos.x, state->player.pos.y, 1.0f);
+        state->camera.position = glm::vec3(-state->player.pos.x, state->player.pos.y, 1.0f);
         state->camera.view = glm::lookAt(
             state->camera.position,             // eye
-            glm::vec3(state->player.pos.x, state->player.pos.y, 0.0f),        // target
+            glm::vec3(-state->player.pos.x, state->player.pos.y, 0.0f),        // target
             glm::vec3(0.0f, 1.0f, 0.0f)         // up
         );
     }
+}
+
+inline void WrapPlayerPosition(GameState *state) {
+    float left   = -20.0f;
+    float right  =  20.0f;
+    float bottom = -20.0f;
+    float top    =  20.0f;
+
+    if (state->player.pos.x > right)       state->player.pos.x = left;
+    else if (state->player.pos.x < left)   state->player.pos.x = right;
+
+    if (state->player.pos.y > top)         state->player.pos.y = bottom;
+    else if (state->player.pos.y < bottom) state->player.pos.y = top;
 }
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
@@ -93,12 +106,13 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
+    float maxWidth = 25;
+    float maxHeight = 25;
     float rightBurst = 0;
     float leftBurst = 0;
     float lx = 0;
     float ly = 0;
     if(frame->input.controllers[0].actionDown.endedDown) {
-        printf("A Button Pressed. \n");
         rightBurst = 1;
     } else {
         rightBurst = 0;
@@ -118,29 +132,20 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
     
     lx = frame->input.controllers[0].stickAverageX;
     ly = frame->input.controllers[0].stickAverageY;
-    //printf("X: %f. \n", state->playPos.x);
-    //printf("Y: %f. \n", state->playPos.y);
 
-
-    float rotSpeed  = 0.02f;
-
-    float acceleration = 0.002f; // thrust strength
-    float maxSpeed     = 3.0f;  // max velocity
+    float acceleration = 5.0f;
+    float maxSpeed     = 20.0f;
     float damping      = 0.98f;
-    float rotLerp   = 0.15f;
+    float rotLerp   = 15.0f;
 
     glm::vec2 input(lx, ly);
 
-    // Correct Y axis (gamepad up is usually negative)
     input.y = -input.y;
     input.x = -input.x;
 
-    // Smoothly rotate facing vector toward input
     if(glm::length(input) > 0.0f) {
-        state->player.rotation = glm::normalize(glm::mix(state->player.rotation, input, rotLerp));
+        state->player.rotation = glm::normalize(glm::mix(state->player.rotation, input, rotLerp * frame->deltaTime));
     }
-    //printf("Stick Y: %f \n", input.y);
-    printf("Player Y: %f \n", state->player.rotation.y);
 
     if(rightBurst) {
         state->player.velocity += state->player.rotation * acceleration;
@@ -152,16 +157,11 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
 
     state->player.velocity *= damping;
 
-    state->player.pos += state->player.velocity;
-
-    //glm::mat4 model = glm::mat4(1.0f); // identity
-    //model = glm::translate(model, glm::vec3(-state->player.pos.x, state->player->pos.y, 0.0f));
-
-    //glm::vec2 right(state->player.rotation.y, -state->player.rotation.x);  // perpendicular vector
-    //model[0][0] = right.x;  model[1][0] = right.y;
-    //model[0][1] = facing.x; model[1][1] = facing.y;
-    //model = glm::rotate(model, test, glm::vec3(0.0f, 0.0f, 1.0f));
-
+    state->player.pos += state->player.velocity * frame->deltaTime;
+    WrapPlayerPosition(state);
+    //printf("X: %f \n", state->player.pos.x);
+    //printf("Y: %f \n", state->player.pos.y);
+    UpdateCamera(state);
 }
 
 void GameRender(GameState *state, PlatformMemory *memory) {
