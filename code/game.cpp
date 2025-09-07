@@ -135,7 +135,7 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
 
     float acceleration = 5.0f;
     float maxSpeed     = 20.0f;
-    float damping      = 0.98f;
+    float damping      = 0.992f;
     float rotLerp   = 15.0f;
 
     glm::vec2 input(lx, ly);
