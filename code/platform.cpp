@@ -1,3 +1,4 @@
+#include "entity.h"
 #include "game.h"
 #include "memory.h"
 #include "render_commands.h"
@@ -5,6 +6,15 @@
 #include <GLFW/glfw3.h>
 #include <cstdio>
 #include <glm/gtc/type_ptr.hpp>
+
+#define PushStruct(arena, type) (type *)PushSize_(arena, sizeof(type))
+
+inline void* PushSize_(MemoryArena* arena, size_t size) {
+    assert(arena->used + size <= arena->size);
+    void* ptr = (uint8_t*)arena->base + arena->used;
+    arena->used += size;
+    return ptr;
+}
 
 static void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
@@ -68,7 +78,7 @@ void PlatformInit(PlatformRenderer *renderer, const char* vertexShaderText, cons
         renderer->vposLocation,
         2, GL_FLOAT, GL_FALSE,
         sizeof(Vertex), 
-        (void*)offsetof(Vertex, pos)
+        (void*)offsetof(Vertex, position)
     );
 
     // color attribute
@@ -118,12 +128,12 @@ void PlatformRunGameLoop(PlatformAPI *api,
     void* transMem = malloc(TRANS_SIZE);
 
     PlatformMemory memory = {};
-    ArenaInit(&memory.permantent, permMem, PERM_SIZE);
+    ArenaInit(&memory.permanent, permMem, PERM_SIZE);
     ArenaInit(&memory.transient, transMem, TRANS_SIZE);
 
 
-    GameState game = {0};
-    GameInit(&game, api, &memory);
+    GameState* game = (GameState*)ArenaAlloc(&memory.permanent, sizeof(GameState));
+    GameInit(game, api, &memory);
 
     double lastFrameTime = 0.0;
 
@@ -217,10 +227,10 @@ void PlatformRunGameLoop(PlatformAPI *api,
         glfwGetFramebufferSize(window, &renderer->width, &renderer->height);
         renderer->ratio = renderer->width / (float) renderer->height;
 
-        GameUpdate(&game, &frame, &memory);
-        GameRender(&game, &memory);
+        GameUpdate(game, &frame, &memory);
+        GameRender(game, &memory);
 
-        PlatformRender(renderer, game.commands, game.renderCommandsCount);
+        PlatformRender(renderer, game->commands, game->renderCommandsCount);
 
         GameInput *temp = newInput;
         newInput = oldInput;

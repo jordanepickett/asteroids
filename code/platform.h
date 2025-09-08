@@ -15,7 +15,7 @@ struct PlatformRenderer {
 };
 
 struct PlatformMemory {
-    MemoryArena permantent;
+    MemoryArena permanent;
     MemoryArena transient;
 };
 

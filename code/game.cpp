@@ -1,3 +1,4 @@
+#include "entity.h"
 #include "game.h"
 #include "memory.h"
 #include "platform.h"
@@ -7,6 +8,8 @@
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
+
+const int MAX_ENTITIES = 100;
 
 inline void PushText(MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* str) {
     size_t len = strlen(str);
@@ -25,7 +28,8 @@ inline void PushTrianges(
     GameState *state,
     MemoryArena *memory,
     Vertex *verts,
-    int vertexCount
+    int vertexCount,
+    Entity* entity
 ) {
 
     glm::mat4 mvp = state->camera.projection * state->camera.view;
@@ -35,8 +39,8 @@ inline void PushTrianges(
     drawCmd->header.size = (uint32_t)size;
     drawCmd->mvp = mvp;
     drawCmd->vertexCount = 3;
-    drawCmd->pos = state->player.pos;
-    drawCmd->rotation = state->player.rotation;
+    drawCmd->pos = entity->transform.position;
+    drawCmd->rotation = entity->transform.rotation;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
     memcpy(dst, verts, 3 * sizeof(Vertex));
 }
@@ -53,35 +57,59 @@ inline void PushLoop(
     auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
     drawCmd->header.type = RENDER_CMD_DRAW_LOOP;
     drawCmd->header.size = (uint32_t)size;
-    drawCmd->pos = state->player.pos;
+    //drawCmd->pos = state->player.pos;
     drawCmd->mvp = mvp;
     drawCmd->vertexCount = 4;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
     memcpy(dst, verts, 4 * sizeof(Vertex));
 }
 
-inline void UpdateCamera(GameState *state) {
+inline void UpdateCamera(GameState *state, Entity *entity) {
     if(!state->camera.isLocked) {
-        state->camera.position = glm::vec3(-state->player.pos.x, state->player.pos.y, 1.0f);
+        state->camera.position = glm::vec3(-entity->transform.position.x, entity->transform.position.y, 1.0f);
         state->camera.view = glm::lookAt(
             state->camera.position,             // eye
-            glm::vec3(-state->player.pos.x, state->player.pos.y, 0.0f),        // target
+            glm::vec3(-entity->transform.position.x, entity->transform.position.y, 0.0f),        // target
             glm::vec3(0.0f, 1.0f, 0.0f)         // up
         );
     }
 }
 
-inline void WrapPlayerPosition(GameState *state) {
+inline void WrapEntityPosition(Entity *entity) {
     float left   = -20.0f;
     float right  =  20.0f;
     float bottom = -20.0f;
     float top    =  20.0f;
 
-    if (state->player.pos.x > right)       state->player.pos.x = left;
-    else if (state->player.pos.x < left)   state->player.pos.x = right;
+    if (entity->transform.position.x > right)       entity->transform.position.x = left;
+    else if (entity->transform.position.x < left)   entity->transform.position.x = right;
 
-    if (state->player.pos.y > top)         state->player.pos.y = bottom;
-    else if (state->player.pos.y < bottom) state->player.pos.y = top;
+    if (entity->transform.position.y > top)         entity->transform.position.y = bottom;
+    else if (entity->transform.position.y < bottom) entity->transform.position.y = top;
+}
+
+Entity* CreateEntity(GameState* state, EntityType entityType) {
+    for(int i = 0; i < MAX_ENTITIES; i++) {
+        if(!state->entities[i].isActive) {
+            Entity* e = &state->entities[i];
+            *e = {};
+            e->isActive = true;
+            e->type = entityType;
+            e->transform = {
+                glm::vec2(0.0f, 0.0f),
+                glm::vec2(0.0f, 1.0f),
+                glm::vec2(1.0f, 1.0f),
+                glm::vec2(0.0f, 0.0f)
+            };
+            return e;
+        }
+    }
+
+    return nullptr;
+}
+
+void DestoryEntity(Entity *entity) {
+    entity->isActive = false;
 }
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
@@ -102,12 +130,31 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
         glm::vec3(0.0f, 1.0f, 0.0f)         // up
     );
     state->camera.isLocked = true;
-    state->player.rotation = glm::vec2(0.0f, 1.0f);
+    //state->player.rotation = glm::vec2(0.0f, 1.0f);
+
+    state->entities = (Entity*)ArenaAlloc(&memory->permanent, sizeof(Entity) * MAX_ENTITIES);
+    //state->freeEntityCount = MAX_ENTITIES;
+    for(int i = 0; i < MAX_ENTITIES; i++) {
+        //state->freeEntitiesList[i] = MAX_ENTITIES - 1 - i;
+        
+        state->entities[i] = {};
+        state->entities[i].isActive = false;
+        state->entities[i].type = ENTITY_NONE;
+    }
+
+    CreateEntity(state, ENTITY_PLAYER);
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
-    float maxWidth = 25;
-    float maxHeight = 25;
+    //printf("X: %f \n", state->player.pos.x);
+    //printf("Y: %f \n", state->player.pos.y);
+    //UpdateCamera(state);
+
+    UpdateEntities(state, frame);
+    GameRender(state, memory);
+}
+
+void PlayerInput(PlatformFrame *frame, Entity* entity) {
     float rightBurst = 0;
     float leftBurst = 0;
     float lx = 0;
@@ -144,24 +191,45 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
     input.x = -input.x;
 
     if(glm::length(input) > 0.0f) {
-        state->player.rotation = glm::normalize(glm::mix(state->player.rotation, input, rotLerp * frame->deltaTime));
+        entity->transform.rotation = glm::normalize(glm::mix(entity->transform.rotation, input, rotLerp * frame->deltaTime));
     }
 
     if(rightBurst) {
-        state->player.velocity += state->player.rotation * acceleration;
+        entity->transform.velocity += entity->transform.rotation * acceleration;
     }
 
-    if (glm::length(state->player.velocity) > maxSpeed) {
-        state->player.velocity = glm::normalize(state->player.velocity) * maxSpeed;
+    if (glm::length(entity->transform.velocity) > maxSpeed) {
+        entity->transform.velocity = glm::normalize(entity->transform.velocity) * maxSpeed;
     }
 
-    state->player.velocity *= damping;
+    entity->transform.velocity *= damping;
 
-    state->player.pos += state->player.velocity * frame->deltaTime;
-    WrapPlayerPosition(state);
-    //printf("X: %f \n", state->player.pos.x);
-    //printf("Y: %f \n", state->player.pos.y);
-    UpdateCamera(state);
+    entity->transform.position += entity->transform.velocity * frame->deltaTime;
+}
+
+void UpdateEntities(GameState *state, PlatformFrame *frame) {
+
+    for(int i = 0; i < MAX_ENTITIES; i++) {
+        Entity* e = &state->entities[i];
+
+        if(!e->isActive) continue;
+
+        switch(e->type) {
+            case ENTITY_PLAYER:
+                {
+                    PlayerInput(frame, e);
+                    UpdateCamera(state, e);
+                } break;
+            default:
+                {
+
+                } break;
+        }
+
+        if(state->camera.isLocked) {
+            WrapEntityPosition(e);
+        }
+    }
 }
 
 void GameRender(GameState *state, PlatformMemory *memory) {
@@ -173,24 +241,37 @@ void GameRender(GameState *state, PlatformMemory *memory) {
     cmd->header.size = sizeof(RenderCommandClear);
     cmd->color = {0.f, 0.f, 0.f};
 
-    {
-        Vertex verts[3] = {
-            {{ 0.0f,  1.0f}, {0.f, 1.f, 0.f}},
-            {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-            {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-        };
-        PushTrianges(state, &memory->transient, verts, 3);
+    for(int i = 0; i < MAX_ENTITIES; i++) {
+        Entity* e = &state->entities[i];
+
+        if(!e->isActive) continue;
+
+        switch(e->type) {
+            case ENTITY_PLAYER:
+                {
+                    Vertex verts[3] = {
+                        {{ 0.0f,  1.0f}, {0.f, 1.f, 0.f}},
+                        {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+                        {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+                    };
+                    PushTrianges(state, &memory->transient, verts, 3, e);
+                } break;
+            default: 
+                {
+
+                } break;
+        }
     }
 
-    {
-        Vertex verts[4] = {
-            {{ 0.0f,  0.0f}, {1.f, 0.f, 0.f}},
-            {{ 0.0f, -1.0f}, {0.f, 1.f, 0.f}},
-            {{ 1.0f, -1.0f}, {0.f, 0.f, 1.f}},
-            {{ 1.0f,  0.0f}, {0.f, 0.f, 1.f}},
-        };
-        PushLoop(state, &memory->transient, verts, 4);
-    }
+    //{
+    //    Vertex verts[4] = {
+    //        {{ 0.0f,  0.0f}, {1.f, 0.f, 0.f}},
+    //        {{ 0.0f, -1.0f}, {0.f, 1.f, 0.f}},
+    //        {{ 1.0f, -1.0f}, {0.f, 0.f, 1.f}},
+    //        {{ 1.0f,  0.0f}, {0.f, 0.f, 1.f}},
+    //    };
+    //    PushLoop(state, &memory->transient, verts, 4);
+    //}
 
     // TODO: Text
     //PushText(&memory->transient, {20, 20}, {1,1,1,1}, "Health: 100");

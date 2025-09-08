@@ -1,3 +1,5 @@
+#pragma once
+#include "entity.h"
 #include "platform.h"
 #include <glm/glm.hpp>
 #include <glad/glad.h>
@@ -9,26 +11,21 @@ struct Camera {
     bool isLocked;
 };
 
-struct Player {
-    glm::vec2 pos;
-    glm::vec2 rotation;
-    glm::vec2 velocity;
-};
-
 struct GameState {
     GLuint vao;
 
     void* commands;
     int renderCommandsCount;
-    Player player;
+    Entity *entities;
+    int *freeEntitiesList;
+    int freeEntityCount;
     Camera camera;
-};
-
-struct Vertex {
-    glm::vec2 pos;
-    glm::vec3 color;
 };
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory);
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory);
 void GameRender(GameState *state, PlatformMemory *memory);
+Entity* CreateEntity(GameState *state, EntityType entity);
+void DestoryEntity(Entity* entity);
+void UpdateEntities(GameState* state, PlatformFrame *frame);
+void PlayerInput(PlatformFrame *frame, Entity* entity);
