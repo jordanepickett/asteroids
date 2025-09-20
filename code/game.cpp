@@ -4,6 +4,7 @@
 #include "platform.h"
 #include "render_commands.h"
 #include <cstdio>
+#include <cstring>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include <GLFW/glfw3.h>
@@ -219,6 +220,9 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
                 {
                     PlayerInput(frame, e);
                     UpdateCamera(state, e);
+                } break;
+            case ENTITY_ASTEROID:
+                {
                 } break;
             default:
                 {

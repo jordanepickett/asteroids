@@ -8,7 +8,7 @@ enum EntityType {
     ENTITY_WALL,
     ENTITY_MISSLE,
     ENTITY_PARTICLE,
-    ENTITY_ALIEN
+    ENTITY_ALIEN,
 };
 
 struct Transform {
