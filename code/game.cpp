@@ -3,6 +3,7 @@
 #include "memory.h"
 #include "platform.h"
 #include "render_commands.h"
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <glad/glad.h>
@@ -34,23 +35,24 @@ inline void PushTrianges(
 ) {
 
     glm::mat4 mvp = state->camera.projection * state->camera.view;
-    size_t size = sizeof(RenderCommandDrawTriangles) + 3 * sizeof(Vertex); // assuming simple 2D verts
+    size_t size = sizeof(RenderCommandDrawTriangles) + vertexCount * sizeof(Vertex); // assuming simple 2D verts
     auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
     drawCmd->header.type = RENDER_CMD_DRAW_TRIANGLES;
     drawCmd->header.size = (uint32_t)size;
     drawCmd->mvp = mvp;
-    drawCmd->vertexCount = 3;
+    drawCmd->vertexCount = vertexCount;
     drawCmd->pos = entity->transform.position;
     drawCmd->rotation = entity->transform.rotation;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
-    memcpy(dst, verts, 3 * sizeof(Vertex));
+    memcpy(dst, verts, vertexCount * sizeof(Vertex));
 }
 
 inline void PushLoop(
     GameState *state,
     MemoryArena *memory,
     Vertex *verts,
-    int vertexCount
+    int vertexCount,
+    Entity* entity
 ) {
 
     glm::mat4 mvp = state->camera.projection * state->camera.view;
@@ -58,7 +60,7 @@ inline void PushLoop(
     auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
     drawCmd->header.type = RENDER_CMD_DRAW_LOOP;
     drawCmd->header.size = (uint32_t)size;
-    //drawCmd->pos = state->player.pos;
+    drawCmd->pos = entity->transform.position;
     drawCmd->mvp = mvp;
     drawCmd->vertexCount = 4;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
@@ -144,6 +146,12 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     }
 
     CreateEntity(state, ENTITY_PLAYER);
+
+    int maxEntities = 2;
+    for(int i = 0; i < maxEntities; i++) {
+        Entity* e = CreateEntity(state, ENTITY_ASTEROID);
+        e->transform.velocity = glm::vec2(0.5f, (float)0.3f + i);
+    }
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -155,16 +163,24 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
     GameRender(state, memory);
 }
 
-void PlayerInput(PlatformFrame *frame, Entity* entity) {
+void PlayerInput(GameState* state, PlatformFrame *frame, Entity* entity) {
     float rightBurst = 0;
     float leftBurst = 0;
     float lx = 0;
     float ly = 0;
+    printf("%i \n", frame->input.controllers[0].actionDown.halfTransitionCount);
     if(frame->input.controllers[0].actionDown.endedDown) {
-        rightBurst = 1;
-    } else {
-        rightBurst = 0;
-    }
+        Entity* e = CreateEntity(state, ENTITY_MISSLE);
+        if(e) {
+            e->transform.position.x = entity->transform.position.x + entity->transform.rotation.x;
+            e->transform.position.y = entity->transform.position.y + entity->transform.rotation.y;
+
+            e->transform.rotation.x = entity->transform.rotation.x;
+            e->transform.rotation.y = entity->transform.rotation.y;
+
+            e->transform.velocity = entity->transform.rotation * 1.0f;
+        }
+    } 
     if(frame->input.controllers[0].moveDown.endedDown) {
         //state->player.pos.y -= 0.02f;
     }
@@ -176,6 +192,11 @@ void PlayerInput(PlatformFrame *frame, Entity* entity) {
     }
     if(frame->input.controllers[0].moveRight.endedDown) {
         //state->player.pos.x += 0.02f;
+    }
+    if(frame->input.controllers[0].rightShoulder.endedDown) {
+        rightBurst = 1;
+    } else {
+        rightBurst = 0;
     }
     
     lx = frame->input.controllers[0].stickAverageX;
@@ -218,11 +239,16 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
         switch(e->type) {
             case ENTITY_PLAYER:
                 {
-                    PlayerInput(frame, e);
+                    PlayerInput(state, frame, e);
                     UpdateCamera(state, e);
                 } break;
             case ENTITY_ASTEROID:
                 {
+                    e->transform.position += e->transform.velocity * frame->deltaTime;
+                } break;
+            case ENTITY_MISSLE:
+                {
+                    e->transform.position += e->transform.velocity * frame->deltaTime;
                 } break;
             default:
                 {
@@ -259,6 +285,25 @@ void GameRender(GameState *state, PlatformMemory *memory) {
                         {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
                     };
                     PushTrianges(state, &memory->transient, verts, 3, e);
+                } break;
+            case ENTITY_ASTEROID:
+                {
+                    Vertex verts[3] = {
+                        {{ 0.0f,  1.0f}, {1.f, 1.f, 0.f}},
+                        {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+                        {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+                    };
+                    PushTrianges(state, &memory->transient, verts, 3, e);
+                } break;
+            case ENTITY_MISSLE:
+                {
+                    Vertex verts[4] = {
+                        {{ -0.3f,  0.3f}, {1.f, 1.f, 1.f}},
+                        {{ -0.3f,  -0.3f}, {1.f, 1.f, 1.f}},
+                        {{ 0.3f,  -0.3f}, {1.f, 1.f, 1.f}},
+                        {{ 0.3f,  0.3f}, {1.f, 1.f, 1.f}},
+                    };
+                    PushLoop(state, &memory->transient, verts, 4, e);
                 } break;
             default: 
                 {
