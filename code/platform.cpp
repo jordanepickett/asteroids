@@ -155,8 +155,10 @@ void PlatformRunGameLoop(PlatformAPI *api,
         GLFWgamepadstate state;
         if(glfwGetGamepadState(GLFW_JOYSTICK_1, &state)) {
             //TODO Temp getting first controller
-            ControllerInput *oldController = &frame.input.controllers[0];
-            ControllerInput *newController = &frame.input.controllers[0];
+            //ControllerInput *oldController = &frame.input.controllers[0];
+            ControllerInput *oldController = &oldInput->controllers[0];
+            //ControllerInput *newController = &frame.input.controllers[0];
+            ControllerInput *newController = &newInput->controllers[0];
 
             newController->stickAverageX = ApplyDeadzone(state.axes[GLFW_GAMEPAD_AXIS_LEFT_X], 0.25f);
             newController->stickAverageY = ApplyDeadzone(state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y], 0.25f);
@@ -222,6 +224,7 @@ void PlatformRunGameLoop(PlatformAPI *api,
             //player.targetVelocity[0] = inputAxis[0] * player.maxSpeed;
             //player.targetVelocity[1] = inputAxis[1] * player.maxSpeed;
 
+            frame.input.controllers[0] = newInput->controllers[0];
         }
 
         glfwGetFramebufferSize(window, &renderer->width, &renderer->height);

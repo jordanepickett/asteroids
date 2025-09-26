@@ -3,7 +3,6 @@
 #include "memory.h"
 #include "platform.h"
 #include "render_commands.h"
-#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <glad/glad.h>
@@ -12,6 +11,18 @@
 #include <glm/gtc/type_ptr.hpp>
 
 const int MAX_ENTITIES = 100;
+
+inline bool WasPressed(const ButtonState& newState) {
+    return (newState.halfTransitionCount > 0 && newState.endedDown);
+}
+
+inline bool WasReleased(const ButtonState& newState) {
+    return (newState.halfTransitionCount > 0 && !newState.endedDown);
+}
+
+inline bool IsDown(const ButtonState& newState) {
+    return newState.endedDown;
+}
 
 inline void PushText(MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* str) {
     size_t len = strlen(str);
@@ -168,18 +179,21 @@ void PlayerInput(GameState* state, PlatformFrame *frame, Entity* entity) {
     float leftBurst = 0;
     float lx = 0;
     float ly = 0;
-    printf("%i \n", frame->input.controllers[0].actionDown.halfTransitionCount);
-    if(frame->input.controllers[0].actionDown.endedDown) {
+    //printf("%i \n", frame->input.controllers[0].actionDown.halfTransitionCount);
+    if(WasPressed(frame->input.controllers[0].actionDown)) {
         Entity* e = CreateEntity(state, ENTITY_MISSLE);
         if(e) {
+            e->lifeTime = 2.0f;
             e->transform.position.x = entity->transform.position.x + entity->transform.rotation.x;
             e->transform.position.y = entity->transform.position.y + entity->transform.rotation.y;
 
             e->transform.rotation.x = entity->transform.rotation.x;
             e->transform.rotation.y = entity->transform.rotation.y;
 
-            e->transform.velocity = entity->transform.rotation * 1.0f;
+            e->transform.velocity = entity->transform.rotation * 10.0f;
         }
+    } 
+    if(frame->input.controllers[0].actionDown.endedDown) {
     } 
     if(frame->input.controllers[0].moveDown.endedDown) {
         //state->player.pos.y -= 0.02f;
@@ -249,6 +263,10 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
             case ENTITY_MISSLE:
                 {
                     e->transform.position += e->transform.velocity * frame->deltaTime;
+                    e->lifeTime -= 1.0f * frame->deltaTime;
+                    if (e->lifeTime <= 0) {
+                        e->isActive = false;
+                    }
                 } break;
             default:
                 {

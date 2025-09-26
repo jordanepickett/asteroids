@@ -29,5 +29,6 @@ struct Entity {
     bool isActive;
     Vertex *model;
     Transform transform;
+    float lifeTime = 0;
 };
 
