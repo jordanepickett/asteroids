@@ -27,5 +27,6 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory);
 void GameRender(GameState *state, PlatformMemory *memory);
 Entity* CreateEntity(GameState *state, EntityType entity);
 void DestoryEntity(Entity* entity);
+void HandleCollision(GameState *state);
 void UpdateEntities(GameState* state, PlatformFrame *frame);
 void PlayerInput(GameState* state, PlatformFrame *frame, Entity* entity);

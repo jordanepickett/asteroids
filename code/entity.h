@@ -30,5 +30,6 @@ struct Entity {
     Vertex *model;
     Transform transform;
     float lifeTime = 0;
+    float radius = 0.5f;
 };
 

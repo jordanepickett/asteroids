@@ -11,6 +11,45 @@
 #include <glm/gtc/type_ptr.hpp>
 
 const int MAX_ENTITIES = 100;
+const int MAX_ASTEROIDS = 5;
+float asteroidSpawnTimer = 0.0f;
+
+static int CountAsteroids(GameState* state) {
+    int count = 0;
+    for (int i = 0; i < MAX_ENTITIES; i++) {
+        if (state->entities[i].isActive && 
+            state->entities[i].type == ENTITY_ASTEROID)
+        {
+            count++;
+        }
+    }
+    return count;
+}
+
+static void TrySpawnAsteroid(GameState* state) {
+    int amount = CountAsteroids(state);
+    printf("AMOUNT: %i \n", amount);
+    if (amount >= MAX_ASTEROIDS) return;
+
+    while(amount <= MAX_ASTEROIDS) {
+        Entity* a = CreateEntity(state, ENTITY_ASTEROID);
+        if (a) {
+            // random position at edges of screen
+            a->transform.position.x = (rand() % 2 == 0) ? 0.0f : 800;
+            a->transform.position.y = (float)(rand() % 600);
+
+            // random velocity (pick a random direction + speed)
+            float angle = (float)rand() / RAND_MAX * 2.0f * 3.14159f;
+            float speed = 5.0f + (rand() % 5); // 50–150 px/sec
+            a->transform.velocity.x = cosf(angle) * speed;
+            a->transform.velocity.y = sinf(angle) * speed;
+
+            //a->radius = 20.0f + (rand() % 15); // random asteroid size
+        }
+        amount++;
+    }
+
+}
 
 inline bool WasPressed(const ButtonState& newState) {
     return (newState.halfTransitionCount > 0 && newState.endedDown);
@@ -126,6 +165,38 @@ void DestoryEntity(Entity *entity) {
     entity->isActive = false;
 }
 
+void HandleCollision(GameState *state) {
+    for(int i = 0; i < MAX_ENTITIES; i++) {
+        Entity* a = &state->entities[i];
+        if(!a->isActive) continue;
+
+        for(int j = i + 1; j < MAX_ENTITIES; j++) {
+            Entity* b = &state->entities[j];
+            if(!b->isActive) continue;
+
+            float dx = a->transform.position.x - b->transform.position.x;
+            float dy = a->transform.position.y - b->transform.position.y;
+            float dist2 = dx*dx + dy*dy;
+
+            float r = a->radius + b->radius;
+
+            if(dist2 < r*r) {
+                if((a->type == ENTITY_MISSLE && b->type == ENTITY_ASTEROID) ||
+                    (a->type == ENTITY_ASTEROID && b->type == ENTITY_MISSLE)) {
+                    DestoryEntity(a);
+                    DestoryEntity(b);
+                }
+
+                if((a->type == ENTITY_PLAYER && b->type == ENTITY_ASTEROID) ||
+                    (a->type == ENTITY_ASTEROID && b->type == ENTITY_PLAYER)) {
+                    DestoryEntity(a);
+                    DestoryEntity(b);
+                }
+            }
+        }
+    }
+}
+
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     float left   = -20.0f;
     float right  =  20.0f;
@@ -157,21 +228,19 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     }
 
     CreateEntity(state, ENTITY_PLAYER);
-
-    int maxEntities = 2;
-    for(int i = 0; i < maxEntities; i++) {
-        Entity* e = CreateEntity(state, ENTITY_ASTEROID);
-        e->transform.velocity = glm::vec2(0.5f, (float)0.3f + i);
-    }
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
-    //printf("X: %f \n", state->player.pos.x);
-    //printf("Y: %f \n", state->player.pos.y);
-    //UpdateCamera(state);
+
+    asteroidSpawnTimer -= frame->deltaTime;
+    if (asteroidSpawnTimer <= 0.0f) {
+        TrySpawnAsteroid(state);
+        asteroidSpawnTimer = 3.0f; // spawn every ~3 seconds
+    }
 
     UpdateEntities(state, frame);
     GameRender(state, memory);
+    HandleCollision(state);
 }
 
 void PlayerInput(GameState* state, PlatformFrame *frame, Entity* entity) {
@@ -183,14 +252,14 @@ void PlayerInput(GameState* state, PlatformFrame *frame, Entity* entity) {
     if(WasPressed(frame->input.controllers[0].actionDown)) {
         Entity* e = CreateEntity(state, ENTITY_MISSLE);
         if(e) {
-            e->lifeTime = 2.0f;
+            e->lifeTime = 0.5f;
             e->transform.position.x = entity->transform.position.x + entity->transform.rotation.x;
             e->transform.position.y = entity->transform.position.y + entity->transform.rotation.y;
 
             e->transform.rotation.x = entity->transform.rotation.x;
             e->transform.rotation.y = entity->transform.rotation.y;
 
-            e->transform.velocity = entity->transform.rotation * 10.0f;
+            e->transform.velocity = entity->transform.rotation * 50.0f;
         }
     } 
     if(frame->input.controllers[0].actionDown.endedDown) {
@@ -306,12 +375,13 @@ void GameRender(GameState *state, PlatformMemory *memory) {
                 } break;
             case ENTITY_ASTEROID:
                 {
-                    Vertex verts[3] = {
-                        {{ 0.0f,  1.0f}, {1.f, 1.f, 0.f}},
-                        {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-                        {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+                    Vertex verts[4] = {
+                        {{ -1.0f,  1.0f}, {1.f, 1.f, 1.f}},
+                        {{ -1.0f,  -1.0f}, {1.f, 1.f, 1.f}},
+                        {{ 1.0f,  -1.0f}, {1.f, 1.f, 1.f}},
+                        {{ 1.0f,  1.0f}, {1.f, 1.f, 1.f}},
                     };
-                    PushTrianges(state, &memory->transient, verts, 3, e);
+                    PushLoop(state, &memory->transient, verts, 4, e);
                 } break;
             case ENTITY_MISSLE:
                 {
