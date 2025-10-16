@@ -13,6 +13,7 @@
 const int MAX_ENTITIES = 100;
 const int MAX_ASTEROIDS = 5;
 float asteroidSpawnTimer = 0.0f;
+float playerSpawnTimer = 0.0f;
 
 static int CountAsteroids(GameState* state) {
     int count = 0;
@@ -24,6 +25,25 @@ static int CountAsteroids(GameState* state) {
         }
     }
     return count;
+}
+
+static void TrySpawnPlayer(GameState* state) {
+    bool isAlive = false;
+    for (int i = 0; i < MAX_ENTITIES; i++) {
+        if (state->entities[i].isActive && 
+            state->entities[i].type == ENTITY_PLAYER)
+        {
+            isAlive = true;
+        } else if(!state->entities[i].isActive &&
+            state->entities[i].type == ENTITY_PLAYER){
+            isAlive = false;
+        }
+    }
+
+    if(!isAlive) {
+        CreateEntity(state, ENTITY_PLAYER);
+    }
+
 }
 
 static void TrySpawnAsteroid(GameState* state) {
@@ -106,13 +126,13 @@ inline void PushLoop(
 ) {
 
     glm::mat4 mvp = state->camera.projection * state->camera.view;
-    size_t size = sizeof(RenderCommandDrawTriangles) + 4 * sizeof(Vertex); // assuming simple 2D verts
+    size_t size = sizeof(RenderCommandDrawTriangles) + vertexCount * sizeof(Vertex); // assuming simple 2D verts
     auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
     drawCmd->header.type = RENDER_CMD_DRAW_LOOP;
     drawCmd->header.size = (uint32_t)size;
     drawCmd->pos = entity->transform.position;
     drawCmd->mvp = mvp;
-    drawCmd->vertexCount = 4;
+    drawCmd->vertexCount = vertexCount;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
     memcpy(dst, verts, 4 * sizeof(Vertex));
 }
@@ -236,6 +256,12 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
     if (asteroidSpawnTimer <= 0.0f) {
         TrySpawnAsteroid(state);
         asteroidSpawnTimer = 3.0f; // spawn every ~3 seconds
+    }
+
+    playerSpawnTimer -= frame->deltaTime;
+    if (playerSpawnTimer <= 0.0f) {
+        TrySpawnPlayer(state);
+        playerSpawnTimer = 5.0f;
     }
 
     UpdateEntities(state, frame);
