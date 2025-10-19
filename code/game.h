@@ -1,6 +1,8 @@
 #pragma once
 #include "entity.h"
 #include "platform.h"
+#include "queues.h"
+#include "systems.h"
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 
@@ -11,7 +13,7 @@ struct Camera {
     bool isLocked;
 };
 
-struct GameState {
+typedef struct {
     GLuint vao;
 
     void* commands;
@@ -20,7 +22,15 @@ struct GameState {
     int *freeEntitiesList;
     int freeEntityCount;
     Camera camera;
-};
+
+    EntityRegistry *entitiesReg;
+    MovementSystem *movement;
+    HealthSystem *health;
+    DamageSystem *damage;
+    CameraSystem *cameraSys;
+    CollisionQueue *collisions;
+    PlayerInputSystem *playerInput;
+} GameState;
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory);
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory);

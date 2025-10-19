@@ -1,8 +1,13 @@
+#include "defs.h"
 #include "entity.h"
 #include "game.h"
 #include "memory.h"
 #include "platform.h"
+#include "queues.h"
+#include "queues.cpp"
 #include "render_commands.h"
+#include "systems.h"
+#include "systems.cpp"
 #include <cstdio>
 #include <cstring>
 #include <glad/glad.h>
@@ -10,7 +15,6 @@
 #include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
 
-const int MAX_ENTITIES = 100;
 const int MAX_ASTEROIDS = 5;
 float asteroidSpawnTimer = 0.0f;
 float playerSpawnTimer = 0.0f;
@@ -94,6 +98,28 @@ inline void PushText(MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const c
     cmd->length = (int)len;
     char* dst = (char*)cmd + sizeof(RenderCommandDrawText);
     memcpy(dst, str, len + 1);
+}
+
+inline void PushTrianges2(
+    GameState *state,
+    MemoryArena *memory,
+    Vertex *verts,
+    int vertexCount,
+    glm::vec2 pos,
+    glm::vec2 rot
+) {
+
+    glm::mat4 mvp = state->camera.projection * state->camera.view;
+    size_t size = sizeof(RenderCommandDrawTriangles) + vertexCount * sizeof(Vertex); // assuming simple 2D verts
+    auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
+    drawCmd->header.type = RENDER_CMD_DRAW_TRIANGLES;
+    drawCmd->header.size = (uint32_t)size;
+    drawCmd->mvp = mvp;
+    drawCmd->vertexCount = vertexCount;
+    drawCmd->pos = pos;
+    drawCmd->rotation = rot;
+    void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
+    memcpy(dst, verts, vertexCount * sizeof(Vertex));
 }
 
 inline void PushTrianges(
@@ -218,6 +244,36 @@ void HandleCollision(GameState *state) {
 }
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
+    
+    state->entitiesReg = (EntityRegistry*)ArenaAlloc(&memory->permanent, sizeof(EntityRegistry));
+    state->movement = (MovementSystem*)ArenaAlloc(&memory->permanent, sizeof(MovementSystem));
+    state->health = (HealthSystem*)ArenaAlloc(&memory->permanent, sizeof(HealthSystem));
+    state->damage = (DamageSystem*)ArenaAlloc(&memory->permanent, sizeof(DamageSystem));
+    //state->render = ARENA_PUSH_STRUCT(arena, RenderQueue);
+    state->collisions = (CollisionQueue*)ArenaAlloc(&memory->permanent, sizeof(CollisionQueue));
+    state->playerInput = (PlayerInputSystem*)ArenaAlloc(&memory->permanent, sizeof(PlayerInputSystem));
+
+
+    memset(state->entitiesReg, 0, sizeof(EntityRegistry));
+    memset(state->movement, 0, sizeof(MovementSystem));
+    memset(state->health, 0, sizeof(HealthSystem));
+    memset(state->damage, 0, sizeof(DamageSystem));
+    memset(state->collisions, 0, sizeof(CollisionQueue));
+    memset(state->playerInput, 0, sizeof(PlayerInputSystem));
+
+    EntityID player = CreateEntity2(state);
+    glm::vec2 zero = { 0, 0};
+    glm::vec2 rot = { 0, 1};
+    AddMovement(state, player, zero, rot, zero);
+    AddPlayerInput(state, player);
+
+    //EntityRegistryInit(state->entitiesReg);
+    //MovementSystemInit(state->movement);
+    //HealthSystemInit(state->health);
+    //DamageSystemInit(state->damage);
+    //RenderQueueInit(g->render);
+    //CollisionQueueInit(state->collisions);
+
     float left   = -20.0f;
     float right  =  20.0f;
     float bottom = -20.0f;
@@ -247,7 +303,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
         state->entities[i].type = ENTITY_NONE;
     }
 
-    CreateEntity(state, ENTITY_PLAYER);
+    //CreateEntity(state, ENTITY_PLAYER);
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -274,7 +330,6 @@ void PlayerInput(GameState* state, PlatformFrame *frame, Entity* entity) {
     float leftBurst = 0;
     float lx = 0;
     float ly = 0;
-    //printf("%i \n", frame->input.controllers[0].actionDown.halfTransitionCount);
     if(WasPressed(frame->input.controllers[0].actionDown)) {
         Entity* e = CreateEntity(state, ENTITY_MISSLE);
         if(e) {
@@ -340,6 +395,8 @@ void PlayerInput(GameState* state, PlatformFrame *frame, Entity* entity) {
 
 void UpdateEntities(GameState *state, PlatformFrame *frame) {
 
+    PlayerInputUpdate(state->playerInput, state->movement, frame);
+
     for(int i = 0; i < MAX_ENTITIES; i++) {
         Entity* e = &state->entities[i];
 
@@ -348,7 +405,7 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
         switch(e->type) {
             case ENTITY_PLAYER:
                 {
-                    PlayerInput(state, frame, e);
+                    //PlayerInput(state, frame, e);
                     UpdateCamera(state, e);
                 } break;
             case ENTITY_ASTEROID:
@@ -384,6 +441,26 @@ void GameRender(GameState *state, PlatformMemory *memory) {
     cmd->header.size = sizeof(RenderCommandClear);
     cmd->color = {0.f, 0.f, 0.f};
 
+    MovementSystem *movementSystem = state->movement;
+
+    for(int i = 0; i < state->entitiesReg->count; i++) {
+        int movementIndex = movementSystem->id_to_index[i];
+        glm::vec2 pos = {0,0};
+        glm::vec2 rot = {0,0};
+        if (movementIndex >= 0) {
+            pos = movementSystem->pos[movementIndex];
+            rot = movementSystem->rot[movementIndex];
+        } 
+
+        Vertex verts[3] = {
+            {{ 0.0f,  1.0f}, {0.f, 1.f, 0.f}},
+            {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+            {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+        };
+        PushTrianges2(state, &memory->transient, verts, 3, pos, rot);
+
+    }
+
     for(int i = 0; i < MAX_ENTITIES; i++) {
         Entity* e = &state->entities[i];
 
@@ -397,7 +474,7 @@ void GameRender(GameState *state, PlatformMemory *memory) {
                         {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
                         {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
                     };
-                    PushTrianges(state, &memory->transient, verts, 3, e);
+                    //PushTrianges(state, &memory->transient, verts, 3, e);
                 } break;
             case ENTITY_ASTEROID:
                 {
