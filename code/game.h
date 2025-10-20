@@ -29,7 +29,10 @@ typedef struct {
     DamageSystem *damage;
     CameraSystem *cameraSys;
     CollisionQueue *collisions;
+    ProjectileQueue *projectile;
     PlayerInputSystem *playerInput;
+    FireMissleSystem *fireMissile;
+    LifeTimeSystem *lifetime;
 } GameState;
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory);

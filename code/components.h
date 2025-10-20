@@ -10,5 +10,7 @@ enum {
     COMP_DAMAGE    = 1 << 4,
     COMP_CAMERA    = 1 << 5,
     COMP_PLAYER_INPUT = 1 << 6,
+    COMP_FIRE_MISSLE = 1 << 7,
+    COMP_LIFETIME = 1 << 8,
 };
 

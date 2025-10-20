@@ -2,12 +2,10 @@
 #include "entity.h"
 #include "game.h"
 #include "memory.h"
-#include "platform.h"
 #include "queues.h"
 #include "queues.cpp"
 #include "render_commands.h"
 #include "systems.h"
-#include "systems.cpp"
 #include <cstdio>
 #include <cstring>
 #include <glad/glad.h>
@@ -73,18 +71,6 @@ static void TrySpawnAsteroid(GameState* state) {
         amount++;
     }
 
-}
-
-inline bool WasPressed(const ButtonState& newState) {
-    return (newState.halfTransitionCount > 0 && newState.endedDown);
-}
-
-inline bool WasReleased(const ButtonState& newState) {
-    return (newState.halfTransitionCount > 0 && !newState.endedDown);
-}
-
-inline bool IsDown(const ButtonState& newState) {
-    return newState.endedDown;
 }
 
 inline void PushText(MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* str) {
@@ -245,27 +231,40 @@ void HandleCollision(GameState *state) {
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     
+    // Systems
     state->entitiesReg = (EntityRegistry*)ArenaAlloc(&memory->permanent, sizeof(EntityRegistry));
     state->movement = (MovementSystem*)ArenaAlloc(&memory->permanent, sizeof(MovementSystem));
     state->health = (HealthSystem*)ArenaAlloc(&memory->permanent, sizeof(HealthSystem));
     state->damage = (DamageSystem*)ArenaAlloc(&memory->permanent, sizeof(DamageSystem));
     //state->render = ARENA_PUSH_STRUCT(arena, RenderQueue);
-    state->collisions = (CollisionQueue*)ArenaAlloc(&memory->permanent, sizeof(CollisionQueue));
     state->playerInput = (PlayerInputSystem*)ArenaAlloc(&memory->permanent, sizeof(PlayerInputSystem));
+    state->fireMissile = (FireMissleSystem*)ArenaAlloc(&memory->permanent, sizeof(FireMissleSystem));
+    state->lifetime = (LifeTimeSystem*)ArenaAlloc(&memory->permanent, sizeof(LifeTimeSystem));
+
+    // Queues
+    state->collisions = (CollisionQueue*)ArenaAlloc(&memory->permanent, sizeof(CollisionQueue));
+    state->projectile = (ProjectileQueue*)ArenaAlloc(&memory->permanent, sizeof(ProjectileQueue));
 
 
+    // Systems 0
     memset(state->entitiesReg, 0, sizeof(EntityRegistry));
     memset(state->movement, 0, sizeof(MovementSystem));
     memset(state->health, 0, sizeof(HealthSystem));
     memset(state->damage, 0, sizeof(DamageSystem));
-    memset(state->collisions, 0, sizeof(CollisionQueue));
     memset(state->playerInput, 0, sizeof(PlayerInputSystem));
+    memset(state->fireMissile, 0, sizeof(FireMissleSystem));
+    memset(state->lifetime, 0, sizeof(LifeTimeSystem));
+
+    // Queues 0
+    memset(state->collisions, 0, sizeof(CollisionQueue));
+    memset(state->projectile, 0, sizeof(ProjectileQueue));
 
     EntityID player = CreateEntity2(state);
     glm::vec2 zero = { 0, 0};
     glm::vec2 rot = { 0, 1};
     AddMovement(state, player, zero, rot, zero);
     AddPlayerInput(state, player);
+    AddFireMissleSystem(state, player);
 
     //EntityRegistryInit(state->entitiesReg);
     //MovementSystemInit(state->movement);
@@ -325,77 +324,18 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
     HandleCollision(state);
 }
 
-void PlayerInput(GameState* state, PlatformFrame *frame, Entity* entity) {
-    float rightBurst = 0;
-    float leftBurst = 0;
-    float lx = 0;
-    float ly = 0;
-    if(WasPressed(frame->input.controllers[0].actionDown)) {
-        Entity* e = CreateEntity(state, ENTITY_MISSLE);
-        if(e) {
-            e->lifeTime = 0.5f;
-            e->transform.position.x = entity->transform.position.x + entity->transform.rotation.x;
-            e->transform.position.y = entity->transform.position.y + entity->transform.rotation.y;
-
-            e->transform.rotation.x = entity->transform.rotation.x;
-            e->transform.rotation.y = entity->transform.rotation.y;
-
-            e->transform.velocity = entity->transform.rotation * 50.0f;
-        }
-    } 
-    if(frame->input.controllers[0].actionDown.endedDown) {
-    } 
-    if(frame->input.controllers[0].moveDown.endedDown) {
-        //state->player.pos.y -= 0.02f;
-    }
-    if(frame->input.controllers[0].moveUp.endedDown) {
-        //state->player.pos.y += 0.02f;
-    }
-    if(frame->input.controllers[0].moveLeft.endedDown) {
-        //state->player.pos.x -= 0.02f;
-    }
-    if(frame->input.controllers[0].moveRight.endedDown) {
-        //state->player.pos.x += 0.02f;
-    }
-    if(frame->input.controllers[0].rightShoulder.endedDown) {
-        rightBurst = 1;
-    } else {
-        rightBurst = 0;
-    }
-    
-    lx = frame->input.controllers[0].stickAverageX;
-    ly = frame->input.controllers[0].stickAverageY;
-
-    float acceleration = 5.0f;
-    float maxSpeed     = 20.0f;
-    float damping      = 0.992f;
-    float rotLerp   = 15.0f;
-
-    glm::vec2 input(lx, ly);
-
-    input.y = -input.y;
-    input.x = -input.x;
-
-    if(glm::length(input) > 0.0f) {
-        entity->transform.rotation = glm::normalize(glm::mix(entity->transform.rotation, input, rotLerp * frame->deltaTime));
-    }
-
-    if(rightBurst) {
-        entity->transform.velocity += entity->transform.rotation * acceleration;
-    }
-
-    if (glm::length(entity->transform.velocity) > maxSpeed) {
-        entity->transform.velocity = glm::normalize(entity->transform.velocity) * maxSpeed;
-    }
-
-    entity->transform.velocity *= damping;
-
-    entity->transform.position += entity->transform.velocity * frame->deltaTime;
-}
-
 void UpdateEntities(GameState *state, PlatformFrame *frame) {
 
+    // Inputs
     PlayerInputUpdate(state->playerInput, state->movement, frame);
+    FireMissleUpdate(state->fireMissile, frame, state->projectile);
+
+    // Systems
+    MovementUpdate(state->movement, frame);
+    LifeTimeUpdate(state->lifetime, frame);
+
+    // Queue processors
+    ProcessProjectileFire(state);
 
     for(int i = 0; i < MAX_ENTITIES; i++) {
         Entity* e = &state->entities[i];
