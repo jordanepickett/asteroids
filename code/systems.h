@@ -20,9 +20,9 @@ typedef struct {
 } FireMissleSystem;
 
 typedef struct {
-    EntityID ids[1];
+    EntityID ids[2];
     int count;
-    int id_to_index[1];
+    int id_to_index[2];
 } PlayerInputSystem;
 
 typedef struct {

@@ -155,7 +155,7 @@ static void FireMissleUpdate(
     ProjectileQueue *queue
 ) {
     for(int i = 0; i < system->count; i++) {
-        if(WasPressed(frame->input.controllers[i].actionDown)) {
+        if(WasPressed(frame->input.controllers[0].actionDown)) {
             EntityID origin = system->ids[i];
             if (queue->count < (int)(sizeof(queue->events)/sizeof(queue->events[0]))) {
                 queue->events[queue->count].origin = origin;

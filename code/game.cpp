@@ -266,6 +266,12 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     AddPlayerInput(state, player);
     AddFireMissleSystem(state, player);
 
+    EntityID player2 = CreateEntity2(state);
+    glm::vec2 pos = { 5, 5};
+    AddMovement(state, player, pos, rot, zero);
+    AddPlayerInput(state, player2);
+    AddFireMissleSystem(state, player2);
+
     //EntityRegistryInit(state->entitiesReg);
     //MovementSystemInit(state->movement);
     //HealthSystemInit(state->health);
