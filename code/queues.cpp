@@ -13,6 +13,8 @@ static void ProcessProjectileFire(GameState *state) {
     for(int i = 0; i < queue->count; i++) {
         EntityID origin = queue->events[i].origin;
         float lifeTime = queue->events[i].lifeTime;
+        if (!state->entitiesReg->active[origin]) continue;
+
         int movementIndex = movement->id_to_index[origin];
         glm::vec2 originPos = movement->pos[movementIndex];
         glm::vec2 originRot = movement->rot[movementIndex];
@@ -23,7 +25,7 @@ static void ProcessProjectileFire(GameState *state) {
             originPos.y + originRot.y,
         };
 
-        AddMovement(state, projectile, pos, originRot, originRot * 50.0f);
+        AddMovement(state, projectile, pos, originRot, originRot * 10.0f);
         AddLifeTimeSystem(state, projectile, lifeTime);
     }
 

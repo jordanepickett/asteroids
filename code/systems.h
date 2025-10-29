@@ -5,34 +5,34 @@
 #include <glad/glad.h>
 
 typedef struct {
-    EntityID ids[5];
-    float lifetime[5];
+    EntityID ids[20];
+    float lifetime[20];
     int count;
-    int id_to_index[5];
+    int id_to_index[20];
 } LifeTimeSystem;
 
 typedef struct {
-    EntityID ids[5];
-    glm::vec2 offset[5];
-    float lifetime[5];
+    EntityID ids[20];
+    glm::vec2 offset[20];
+    float lifetime[20];
     int count;
-    int id_to_index[5];
+    int id_to_index[20];
 } FireMissleSystem;
 
 typedef struct {
-    EntityID ids[2];
+    EntityID ids[3];
+    int id_to_index[3];
     int count;
-    int id_to_index[2];
 } PlayerInputSystem;
 
 typedef struct {
-    EntityID ids[5];
-    glm::mat4 projection[5];
-    glm::mat4 view[5];
-    glm::vec3 pos[5];
-    bool isLocked[5];
+    EntityID ids[3];
+    glm::mat4 projection[3];
+    glm::mat4 view[3];
+    glm::vec3 pos[3];
+    bool isLocked[3];
     int count;
-    int id_to_index[5];
+    int id_to_index[3];
 } CameraSystem;
 
 typedef struct {
@@ -67,7 +67,11 @@ typedef struct {
 } DamageSystem;
 
 typedef struct {
+    EntityID freeList[MAX_ENTITIES];
+    int freeCount;
     CompMask comp[MAX_ENTITIES];
     int active[MAX_ENTITIES];
+    int toDelete[MAX_ENTITIES];
+    int deleteCount;
     int count;
 } EntityRegistry;

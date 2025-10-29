@@ -50,7 +50,7 @@ static void TrySpawnPlayer(GameState* state) {
 
 static void TrySpawnAsteroid(GameState* state) {
     int amount = CountAsteroids(state);
-    printf("AMOUNT: %i \n", amount);
+    //printf("AMOUNT: %i \n", amount);
     if (amount >= MAX_ASTEROIDS) return;
 
     while(amount <= MAX_ASTEROIDS) {
@@ -236,6 +236,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     state->movement = (MovementSystem*)ArenaAlloc(&memory->permanent, sizeof(MovementSystem));
     state->health = (HealthSystem*)ArenaAlloc(&memory->permanent, sizeof(HealthSystem));
     state->damage = (DamageSystem*)ArenaAlloc(&memory->permanent, sizeof(DamageSystem));
+    state->cameraSys = (CameraSystem*)ArenaAlloc(&memory->permanent, sizeof(CameraSystem));
     //state->render = ARENA_PUSH_STRUCT(arena, RenderQueue);
     state->playerInput = (PlayerInputSystem*)ArenaAlloc(&memory->permanent, sizeof(PlayerInputSystem));
     state->fireMissile = (FireMissleSystem*)ArenaAlloc(&memory->permanent, sizeof(FireMissleSystem));
@@ -251,6 +252,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     memset(state->movement, 0, sizeof(MovementSystem));
     memset(state->health, 0, sizeof(HealthSystem));
     memset(state->damage, 0, sizeof(DamageSystem));
+    memset(state->cameraSys, 0, sizeof(CameraSystem));
     memset(state->playerInput, 0, sizeof(PlayerInputSystem));
     memset(state->fireMissile, 0, sizeof(FireMissleSystem));
     memset(state->lifetime, 0, sizeof(LifeTimeSystem));
@@ -259,6 +261,13 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     memset(state->collisions, 0, sizeof(CollisionQueue));
     memset(state->projectile, 0, sizeof(ProjectileQueue));
 
+    EntityRegistryInit(state->entitiesReg);
+    MovementSystemInit(state->movement);
+    HealthSystemInit(state->health);
+    DamageSystemInit(state->damage);
+    //RenderQueueInit(g->render);
+    //CollisionQueueInit(state->collisions);
+
     EntityID player = CreateEntity2(state);
     glm::vec2 zero = { 0, 0};
     glm::vec2 rot = { 0, 1};
@@ -266,18 +275,18 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     AddPlayerInput(state, player);
     AddFireMissleSystem(state, player);
 
-    EntityID player2 = CreateEntity2(state);
-    glm::vec2 pos = { 5, 5};
-    AddMovement(state, player, pos, rot, zero);
-    AddPlayerInput(state, player2);
-    AddFireMissleSystem(state, player2);
+    //EntityID player2 = CreateEntity2(state);
+    //glm::vec2 pos = { 5, 5};
+    //AddMovement(state, player2, pos, rot, zero);
+    //AddPlayerInput(state, player2);
+    //AddFireMissleSystem(state, player2);
 
-    //EntityRegistryInit(state->entitiesReg);
-    //MovementSystemInit(state->movement);
-    //HealthSystemInit(state->health);
-    //DamageSystemInit(state->damage);
-    //RenderQueueInit(g->render);
-    //CollisionQueueInit(state->collisions);
+    //EntityID player3 = CreateEntity2(state);
+    //glm::vec2 pos3 = { 5, -5};
+    //AddMovement(state, player3, pos3, rot, zero);
+    //AddPlayerInput(state, player3);
+    //AddFireMissleSystem(state, player3);
+
 
     float left   = -20.0f;
     float right  =  20.0f;
@@ -331,17 +340,21 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
 }
 
 void UpdateEntities(GameState *state, PlatformFrame *frame) {
+    //printf("entity count: %i\n", state->entitiesReg->count);
 
     // Inputs
     PlayerInputUpdate(state->playerInput, state->movement, frame);
     FireMissleUpdate(state->fireMissile, frame, state->projectile);
+    // Queue processors
+    ProcessProjectileFire(state);
 
     // Systems
     MovementUpdate(state->movement, frame);
-    LifeTimeUpdate(state->lifetime, frame);
+    LifeTimeUpdate(state, frame);
 
-    // Queue processors
-    ProcessProjectileFire(state);
+
+    // Cleanup
+    CleanupDeadEntities(state);
 
     for(int i = 0; i < MAX_ENTITIES; i++) {
         Entity* e = &state->entities[i];
@@ -392,11 +405,12 @@ void GameRender(GameState *state, PlatformMemory *memory) {
     for(int i = 0; i < state->entitiesReg->count; i++) {
         int movementIndex = movementSystem->id_to_index[i];
         glm::vec2 pos = {0,0};
-        glm::vec2 rot = {0,0};
+        glm::vec2 rot = {0,1};
         if (movementIndex >= 0) {
             pos = movementSystem->pos[movementIndex];
             rot = movementSystem->rot[movementIndex];
         } 
+        //printf("movementIndex: %i, X: %f, Y: %f\n", movementIndex, pos.x, pos.y);
 
         Vertex verts[3] = {
             {{ 0.0f,  1.0f}, {0.f, 1.f, 0.f}},
