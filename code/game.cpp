@@ -404,21 +404,20 @@ void GameRender(GameState *state, PlatformMemory *memory) {
 
     for(int i = 0; i < state->entitiesReg->count; i++) {
         int movementIndex = movementSystem->id_to_index[i];
-        glm::vec2 pos = {0,0};
-        glm::vec2 rot = {0,1};
-        if (movementIndex >= 0) {
+        if (movementIndex != -1) {
+            glm::vec2 pos = {0,0};
+            glm::vec2 rot = {0,1};
             pos = movementSystem->pos[movementIndex];
             rot = movementSystem->rot[movementIndex];
+            //printf("movementIndex: %i, X: %f, Y: %f\n", movementIndex, pos.x, pos.y);
+
+            Vertex verts[3] = {
+                {{ 0.0f,  1.0f}, {0.f, 1.f, 0.f}},
+                {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+                {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+            };
+            PushTrianges2(state, &memory->transient, verts, 3, pos, rot);
         } 
-        //printf("movementIndex: %i, X: %f, Y: %f\n", movementIndex, pos.x, pos.y);
-
-        Vertex verts[3] = {
-            {{ 0.0f,  1.0f}, {0.f, 1.f, 0.f}},
-            {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-            {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-        };
-        PushTrianges2(state, &memory->transient, verts, 3, pos, rot);
-
     }
 
     for(int i = 0; i < MAX_ENTITIES; i++) {

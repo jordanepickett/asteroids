@@ -190,10 +190,10 @@ static void LifeTimeUpdate(GameState *state, PlatformFrame *frame) {
     LifeTimeSystem *system = state->lifetime;
     for(int i = 0; i < system->count; i++) {
         system->lifetime[i] -= 1.0f * frame->deltaTime;
-        //printf("Index: %i, Lifetime: %f\n", i, system->lifetime[i]);
         if (system->lifetime[i] <= 0.0f) {
             EntityID entity = system->ids[i];
-            printf("Lifetime Entity Dead: %i\n", entity);
+            printf("DEAD Index: %i, Entity: %i\n", i, entity);
+            //printf("Lifetime Entity Dead: %i\n", entity);
             state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = entity;
         }
     }
@@ -204,62 +204,45 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
     {
         int idx = state->movement->id_to_index[id];
         if (idx != -1) {
-            printf("Removing Index: %i, EntityID: %i\n", idx, id);
             int last = --state->movement->count;
             if (idx != last) {
-                // Move last element into the removed slot
-                printf("Swapping ids: %i, : %i\n", state->movement->ids[idx], state->movement->ids[last]);
                 state->movement->ids[idx]   = state->movement->ids[last];
                 state->movement->pos[idx]   = state->movement->pos[last];
                 state->movement->rot[idx]   = state->movement->rot[last];
                 state->movement->vel[idx]   = state->movement->vel[last];
 
-                // Update reverse lookup
                 state->movement->id_to_index[state->movement->ids[idx]] = idx;
-                printf("Updated Reverse Lookup: %i, : %i\n", state->movement->ids[idx], idx);
             }
         }
+        state->movement->id_to_index[id] = -1;
     }
 
     {
         int idx = state->lifetime->id_to_index[id];
         if (idx != -1) {
-
             int last = --state->lifetime->count;
+
             if (idx != last) {
-                // Move last element into the removed slot
                 state->lifetime->ids[idx]   = state->lifetime->ids[last];
                 state->lifetime->lifetime[idx]   = state->lifetime->lifetime[last];
 
-                // Update reverse lookup
                 state->lifetime->id_to_index[state->lifetime->ids[idx]] = idx;
             }
         }
+        state->lifetime->id_to_index[id] = -1;
+        printf("Lifetime count: %i\n", state->lifetime->count);
     }
 }
 
 static void CleanupDeadEntities(GameState *state) {
-    int inactive = 0;
-    //for (int i = 0; i < state->entitiesReg->count; ++i) {
-        //if (!state->entitiesReg->active[i]) {
-        //    inactive++;
-            //printf("removing: %i\n", i);
-            // Remove from all component systems
-        //    RemoveEntityFromSystems(state, i);
-
-            // Add ID to free list for reuse
-        //    state->entitiesReg->freeList[state->entitiesReg->freeCount++] = i;
-        //    printf("Entity Free Count: %i\n", state->entitiesReg->freeCount);
-       //}
-    //}
     for(int i = 0; i < state->entitiesReg->deleteCount; i++) {
         EntityID entity = state->entitiesReg->toDelete[i];
+        printf("Entity to delete from systems: %i\n", entity);
         if(entity != -1) {
             RemoveEntityFromSystems(state, entity);
+            state->entitiesReg->freeList[state->entitiesReg->freeCount++] = entity;
             state->entitiesReg->toDelete[i] = -1;
-            state->entitiesReg->count--;
         }
     }
     state->entitiesReg->deleteCount = 0;
-    //state->entitiesReg->count -= inactive;
 }
