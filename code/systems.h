@@ -1,6 +1,7 @@
 #pragma once
 #include "defs.h"
 #include "components.h"
+#include "entity.h"
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 
@@ -43,6 +44,14 @@ typedef struct {
     int count;
     int id_to_index[MAX_ENTITIES];
 } MovementSystem;
+
+typedef struct {
+    EntityID ids[MAX_ENTITIES];
+    Vertex* verts[MAX_ENTITIES];
+    int vertCount[MAX_ENTITIES];
+    int count;
+    int id_to_index[MAX_ENTITIES];
+} RenderSystem;
 
 typedef struct {
     EntityID ids[MAX_ENTITIES];

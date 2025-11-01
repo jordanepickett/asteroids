@@ -108,6 +108,28 @@ inline void PushTrianges2(
     memcpy(dst, verts, vertexCount * sizeof(Vertex));
 }
 
+inline void PushLoop2(
+    GameState *state,
+    MemoryArena *memory,
+    Vertex *verts,
+    int vertexCount,
+    glm::vec2 pos,
+    glm::vec2 rot
+) {
+
+    glm::mat4 mvp = state->camera.projection * state->camera.view;
+    size_t size = sizeof(RenderCommandDrawTriangles) + vertexCount * sizeof(Vertex); // assuming simple 2D verts
+    auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
+    drawCmd->header.type = RENDER_CMD_DRAW_LOOP;
+    drawCmd->header.size = (uint32_t)size;
+    drawCmd->pos = pos;
+    drawCmd->rotation = rot;
+    drawCmd->mvp = mvp;
+    drawCmd->vertexCount = vertexCount;
+    void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
+    memcpy(dst, verts, 4 * sizeof(Vertex));
+}
+
 inline void PushTrianges(
     GameState *state,
     MemoryArena *memory,
@@ -233,6 +255,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     
     // Systems
     state->entitiesReg = (EntityRegistry*)ArenaAlloc(&memory->permanent, sizeof(EntityRegistry));
+    state->render = (RenderSystem*)ArenaAlloc(&memory->permanent, sizeof(RenderSystem));
     state->movement = (MovementSystem*)ArenaAlloc(&memory->permanent, sizeof(MovementSystem));
     state->health = (HealthSystem*)ArenaAlloc(&memory->permanent, sizeof(HealthSystem));
     state->damage = (DamageSystem*)ArenaAlloc(&memory->permanent, sizeof(DamageSystem));
@@ -249,6 +272,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
 
     // Systems 0
     memset(state->entitiesReg, 0, sizeof(EntityRegistry));
+    memset(state->render, 0, sizeof(RenderSystem));
     memset(state->movement, 0, sizeof(MovementSystem));
     memset(state->health, 0, sizeof(HealthSystem));
     memset(state->damage, 0, sizeof(DamageSystem));
@@ -265,27 +289,36 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     MovementSystemInit(state->movement);
     HealthSystemInit(state->health);
     DamageSystemInit(state->damage);
+    RenderSystemInit(state->render);
     //RenderQueueInit(g->render);
     //CollisionQueueInit(state->collisions);
 
+    Vertex verts[3] = {
+        {{ 0.0f,  1.0f}, {0.f, 1.f, 0.f}},
+        {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+        {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
+    };
     EntityID player = CreateEntity2(state);
     glm::vec2 zero = { 0, 0};
     glm::vec2 rot = { 0, 1};
     AddMovement(state, player, zero, rot, zero);
+    AddRender(state, player, SHIP, 3);
     AddPlayerInput(state, player);
     AddFireMissleSystem(state, player);
 
-    //EntityID player2 = CreateEntity2(state);
-    //glm::vec2 pos = { 5, 5};
-    //AddMovement(state, player2, pos, rot, zero);
-    //AddPlayerInput(state, player2);
-    //AddFireMissleSystem(state, player2);
+    EntityID player2 = CreateEntity2(state);
+    glm::vec2 pos = { 5, 5};
+    AddMovement(state, player2, pos, rot, zero);
+    AddRender(state, player2, SHIP, 3);
+    AddPlayerInput(state, player2);
+    AddFireMissleSystem(state, player2);
 
-    //EntityID player3 = CreateEntity2(state);
-    //glm::vec2 pos3 = { 5, -5};
-    //AddMovement(state, player3, pos3, rot, zero);
-    //AddPlayerInput(state, player3);
-    //AddFireMissleSystem(state, player3);
+    EntityID player3 = CreateEntity2(state);
+    glm::vec2 pos3 = { 5, -5};
+    AddMovement(state, player3, pos3, rot, zero);
+    AddRender(state, player3, SHIP, 3);
+    AddPlayerInput(state, player3);
+    AddFireMissleSystem(state, player3);
 
 
     float left   = -20.0f;
@@ -401,22 +434,25 @@ void GameRender(GameState *state, PlatformMemory *memory) {
     cmd->color = {0.f, 0.f, 0.f};
 
     MovementSystem *movementSystem = state->movement;
+    RenderSystem *renderSystem = state->render;
 
     for(int i = 0; i < state->entitiesReg->count; i++) {
         int movementIndex = movementSystem->id_to_index[i];
-        if (movementIndex != -1) {
+        int renderIndex = renderSystem->id_to_index[i];
+        if (movementIndex != -1 && renderIndex != -1) {
             glm::vec2 pos = {0,0};
             glm::vec2 rot = {0,1};
             pos = movementSystem->pos[movementIndex];
             rot = movementSystem->rot[movementIndex];
+            Vertex *verts = renderSystem->verts[renderIndex];
+            int count = renderSystem->vertCount[renderIndex];
             //printf("movementIndex: %i, X: %f, Y: %f\n", movementIndex, pos.x, pos.y);
 
-            Vertex verts[3] = {
-                {{ 0.0f,  1.0f}, {0.f, 1.f, 0.f}},
-                {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-                {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-            };
-            PushTrianges2(state, &memory->transient, verts, 3, pos, rot);
+            if(count == 3) {
+                PushTrianges2(state, &memory->transient, verts, count, pos, rot);
+            } else {
+                PushLoop2(state, &memory->transient, verts, count, pos, rot);
+            }
         } 
     }
 

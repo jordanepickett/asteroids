@@ -9,6 +9,11 @@ static void MovementSystemInit(MovementSystem *m) {
     for (int i = 0; i < MAX_ENTITIES; ++i) m->id_to_index[i] = -1;
 }
 
+static void RenderSystemInit(RenderSystem *r) {
+    r->count = 0;
+    for (int i = 0; i < MAX_ENTITIES; ++i) r->id_to_index[i] = -1;
+}
+
 static void HealthSystemInit(HealthSystem *h) {
     h->count = 0;
     for (int i = 0; i < MAX_ENTITIES; ++i) h->id_to_index[i] = -1;
@@ -45,6 +50,19 @@ static EntityID CreateEntity2(GameState* state) {
     state->entitiesReg->comp[id] = COMP_NONE;
     printf("Creating Entity with ID: %i\n", id);
     return id;
+}
+
+static void AddRender(GameState *state, EntityID id, Vertex *verts, int vertCount) {
+    printf("Adding Render to: %i\n", id);
+    RenderSystem *system = state->render;
+    int idx = system->count++;
+    printf("Render System Index: %i\n", idx);
+    system->ids[idx] = id;
+    system->verts[idx] = verts;
+    system->vertCount[idx] = vertCount;
+    assert(id >= 0 && id < MAX_ENTITIES);
+    system->id_to_index[id] = idx;
+    state->entitiesReg->comp[id] |= COMP_RENDER;
 }
 
 static void AddMovement(
@@ -232,6 +250,23 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
         state->lifetime->id_to_index[id] = -1;
         printf("Lifetime count: %i\n", state->lifetime->count);
     }
+
+    {
+        int idx = state->render->id_to_index[id];
+        if (idx != -1) {
+            int last = --state->render->count;
+
+            if (idx != last) {
+                state->render->ids[idx]   = state->render->ids[last];
+                state->render->verts[idx]   = state->render->verts[last];
+                state->render->vertCount[idx]   = state->render->vertCount[last];
+
+                state->render->id_to_index[state->render->ids[idx]] = idx;
+            }
+        }
+        state->render->id_to_index[id] = -1;
+        printf("Render count: %i\n", state->render->count);
+    }
 }
 
 static void CleanupDeadEntities(GameState *state) {
@@ -242,6 +277,7 @@ static void CleanupDeadEntities(GameState *state) {
             RemoveEntityFromSystems(state, entity);
             state->entitiesReg->freeList[state->entitiesReg->freeCount++] = entity;
             state->entitiesReg->toDelete[i] = -1;
+            state->entitiesReg->comp[entity] = COMP_NONE;
         }
     }
     state->entitiesReg->deleteCount = 0;
