@@ -24,6 +24,11 @@ static void DamageSystemInit(DamageSystem *d) {
     for (int i = 0; i < MAX_ENTITIES; ++i) d->id_to_index[i] = -1;
 }
 
+static void AsteroidSystemInit(AsteroidSystem *a) {
+    a->count = 0;
+    for (int i = 0; i < 10; ++i) a->id_to_index[i] = -1;
+}
+
 static void EntityRegistryInit(EntityRegistry *e) {
     e->count = 0;
     e->freeCount = 0;
@@ -122,6 +127,18 @@ static void AddPlayerInput(GameState *state, EntityID id) {
     assert(id >= 0 && id < MAX_ENTITIES);
     system->id_to_index[id] = idx;
     state->entitiesReg->comp[id] |= COMP_PLAYER_INPUT;
+}
+
+static void AddAsteroid(GameState *state, EntityID id) {
+    printf("Adding Asteroid to: %i\n", id);
+    AsteroidSystem *system = state->asteroid;
+    int idx = system->count++;
+    printf("Asteroid Index: %i\n", idx);
+    system->ids[idx] = id;
+    assert(id >= 0 && id < MAX_ENTITIES);
+    //system->offset[idx] = offset;
+    system->id_to_index[id] = idx;
+    state->entitiesReg->comp[id] |= COMP_ASTEROID;
 }
 
 static void MovementUpdate(MovementSystem *system, PlatformFrame *frame) {

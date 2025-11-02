@@ -19,6 +19,13 @@ static Vertex MISSLE[4] = {
     {{ 0.3f,  0.3f}, {1.f, 1.f, 1.f}},
 };
 
+static Vertex ASTEROID[4] = {
+    {{ -1.0f,  1.0f}, {1.f, 1.f, 1.f}},
+    {{ -1.0f,  -1.0f}, {1.f, 1.f, 1.f}},
+    {{ 1.0f,  -1.0f}, {1.f, 1.f, 1.f}},
+    {{ 1.0f,  1.0f}, {1.f, 1.f, 1.f}},
+};
+
 struct Camera {
     glm::mat4 projection;
     glm::mat4 view;
@@ -47,6 +54,7 @@ typedef struct {
     PlayerInputSystem *playerInput;
     FireMissleSystem *fireMissile;
     LifeTimeSystem *lifetime;
+    AsteroidSystem *asteroid;
 } GameState;
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory);

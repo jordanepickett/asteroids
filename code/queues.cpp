@@ -25,7 +25,7 @@ static void ProcessProjectileFire(GameState *state) {
             originPos.y + originRot.y,
         };
 
-        AddMovement(state, projectile, pos, originRot, originRot * 50.0f);
+        AddMovement(state, projectile, pos, originRot, originRot * 30.0f);
         AddRender(state, projectile, MISSLE, 4);
         AddLifeTimeSystem(state, projectile, lifeTime);
     }

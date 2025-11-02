@@ -18,15 +18,7 @@ float asteroidSpawnTimer = 0.0f;
 float playerSpawnTimer = 0.0f;
 
 static int CountAsteroids(GameState* state) {
-    int count = 0;
-    for (int i = 0; i < MAX_ENTITIES; i++) {
-        if (state->entities[i].isActive && 
-            state->entities[i].type == ENTITY_ASTEROID)
-        {
-            count++;
-        }
-    }
-    return count;
+    return state->asteroid->count;
 }
 
 static void TrySpawnPlayer(GameState* state) {
@@ -51,20 +43,25 @@ static void TrySpawnPlayer(GameState* state) {
 static void TrySpawnAsteroid(GameState* state) {
     int amount = CountAsteroids(state);
     //printf("AMOUNT: %i \n", amount);
-    if (amount >= MAX_ASTEROIDS) return;
+    if (amount >= 10) return;
 
-    while(amount <= MAX_ASTEROIDS) {
-        Entity* a = CreateEntity(state, ENTITY_ASTEROID);
+    while(amount <= 10) {
+        EntityID a = CreateEntity2(state);
         if (a) {
             // random position at edges of screen
-            a->transform.position.x = (rand() % 2 == 0) ? 0.0f : 800;
-            a->transform.position.y = (float)(rand() % 600);
+            float x = (rand() % 2 == 0) ? 0.0f : 800;
+            float y = (float)(rand() % 600);
+            glm::vec2 pos = { x, y };
 
             // random velocity (pick a random direction + speed)
             float angle = (float)rand() / RAND_MAX * 2.0f * 3.14159f;
             float speed = 5.0f + (rand() % 5); // 50–150 px/sec
-            a->transform.velocity.x = cosf(angle) * speed;
-            a->transform.velocity.y = sinf(angle) * speed;
+            float velX = cosf(angle) * speed;
+            float velY  = sinf(angle) * speed;
+            glm::vec2 vel = { velX, velY };
+            AddMovement(state, a, pos, { 0, 1 }, vel);
+            AddRender(state, a, ASTEROID, 4);
+            AddAsteroid(state, a);
 
             //a->radius = 20.0f + (rand() % 15); // random asteroid size
         }
@@ -182,6 +179,27 @@ inline void UpdateCamera(GameState *state, Entity *entity) {
     }
 }
 
+inline void WrapSystem(GameState* state) {
+    float left   = -20.0f;
+    float right  =  20.0f;
+    float bottom = -20.0f;
+    float top    =  20.0f;
+
+    MovementSystem* movementSystem = state->movement;
+    for(int i = 0; i < state->entitiesReg->count; i++) {
+        int movementIndex = movementSystem->id_to_index[i];
+        glm::vec2 pos = movementSystem->pos[movementIndex];
+        if (pos.x > right)       pos.x = left;
+        else if (pos.x < left)   pos.x = right;
+
+        if (pos.y > top)         pos.y = bottom;
+        else if (pos.y < bottom) pos.y = top;
+
+        movementSystem->pos[movementIndex] = pos;
+    }
+
+}
+
 inline void WrapEntityPosition(Entity *entity) {
     float left   = -20.0f;
     float right  =  20.0f;
@@ -264,6 +282,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     state->playerInput = (PlayerInputSystem*)ArenaAlloc(&memory->permanent, sizeof(PlayerInputSystem));
     state->fireMissile = (FireMissleSystem*)ArenaAlloc(&memory->permanent, sizeof(FireMissleSystem));
     state->lifetime = (LifeTimeSystem*)ArenaAlloc(&memory->permanent, sizeof(LifeTimeSystem));
+    state->asteroid = (AsteroidSystem*)ArenaAlloc(&memory->permanent, sizeof(AsteroidSystem));
 
     // Queues
     state->collisions = (CollisionQueue*)ArenaAlloc(&memory->permanent, sizeof(CollisionQueue));
@@ -280,6 +299,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     memset(state->playerInput, 0, sizeof(PlayerInputSystem));
     memset(state->fireMissile, 0, sizeof(FireMissleSystem));
     memset(state->lifetime, 0, sizeof(LifeTimeSystem));
+    memset(state->asteroid, 0, sizeof(AsteroidSystem));
 
     // Queues 0
     memset(state->collisions, 0, sizeof(CollisionQueue));
@@ -305,21 +325,6 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     AddRender(state, player, SHIP, 3);
     AddPlayerInput(state, player);
     AddFireMissleSystem(state, player);
-
-    EntityID player2 = CreateEntity2(state);
-    glm::vec2 pos = { 5, 5};
-    AddMovement(state, player2, pos, rot, zero);
-    AddRender(state, player2, SHIP, 3);
-    AddPlayerInput(state, player2);
-    AddFireMissleSystem(state, player2);
-
-    EntityID player3 = CreateEntity2(state);
-    glm::vec2 pos3 = { 5, -5};
-    AddMovement(state, player3, pos3, rot, zero);
-    AddRender(state, player3, SHIP, 3);
-    AddPlayerInput(state, player3);
-    AddFireMissleSystem(state, player3);
-
 
     float left   = -20.0f;
     float right  =  20.0f;
@@ -385,43 +390,13 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
     MovementUpdate(state->movement, frame);
     LifeTimeUpdate(state, frame);
 
+    if(state->camera.isLocked) {
+        WrapSystem(state);
+    }
 
     // Cleanup
     CleanupDeadEntities(state);
 
-    for(int i = 0; i < MAX_ENTITIES; i++) {
-        Entity* e = &state->entities[i];
-
-        if(!e->isActive) continue;
-
-        switch(e->type) {
-            case ENTITY_PLAYER:
-                {
-                    //PlayerInput(state, frame, e);
-                    UpdateCamera(state, e);
-                } break;
-            case ENTITY_ASTEROID:
-                {
-                    e->transform.position += e->transform.velocity * frame->deltaTime;
-                } break;
-            case ENTITY_MISSLE:
-                {
-                    e->transform.position += e->transform.velocity * frame->deltaTime;
-                    e->lifeTime -= 1.0f * frame->deltaTime;
-                    if (e->lifeTime <= 0) {
-                        e->isActive = false;
-                    }
-                } break;
-            default:
-                {
-
-                } break;
-        }
-
-        if(state->camera.isLocked) {
-            WrapEntityPosition(e);
-        }
-    }
 }
 
 void GameRender(GameState *state, PlatformMemory *memory) {
@@ -446,7 +421,7 @@ void GameRender(GameState *state, PlatformMemory *memory) {
             rot = movementSystem->rot[movementIndex];
             Vertex *verts = renderSystem->verts[renderIndex];
             int count = renderSystem->vertCount[renderIndex];
-            //printf("movementIndex: %i, X: %f, Y: %f\n", movementIndex, pos.x, pos.y);
+            printf("movementIndex: %i, X: %f, Y: %f\n", movementIndex, pos.x, pos.y);
 
             if(count == 3) {
                 PushTrianges2(state, &memory->transient, verts, count, pos, rot);
@@ -455,58 +430,6 @@ void GameRender(GameState *state, PlatformMemory *memory) {
             }
         } 
     }
-
-    for(int i = 0; i < MAX_ENTITIES; i++) {
-        Entity* e = &state->entities[i];
-
-        if(!e->isActive) continue;
-
-        switch(e->type) {
-            case ENTITY_PLAYER:
-                {
-                    Vertex verts[3] = {
-                        {{ 0.0f,  1.0f}, {0.f, 1.f, 0.f}},
-                        {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-                        {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-                    };
-                    //PushTrianges(state, &memory->transient, verts, 3, e);
-                } break;
-            case ENTITY_ASTEROID:
-                {
-                    Vertex verts[4] = {
-                        {{ -1.0f,  1.0f}, {1.f, 1.f, 1.f}},
-                        {{ -1.0f,  -1.0f}, {1.f, 1.f, 1.f}},
-                        {{ 1.0f,  -1.0f}, {1.f, 1.f, 1.f}},
-                        {{ 1.0f,  1.0f}, {1.f, 1.f, 1.f}},
-                    };
-                    PushLoop(state, &memory->transient, verts, 4, e);
-                } break;
-            case ENTITY_MISSLE:
-                {
-                    Vertex verts[4] = {
-                        {{ -0.3f,  0.3f}, {1.f, 1.f, 1.f}},
-                        {{ -0.3f,  -0.3f}, {1.f, 1.f, 1.f}},
-                        {{ 0.3f,  -0.3f}, {1.f, 1.f, 1.f}},
-                        {{ 0.3f,  0.3f}, {1.f, 1.f, 1.f}},
-                    };
-                    PushLoop(state, &memory->transient, verts, 4, e);
-                } break;
-            default: 
-                {
-
-                } break;
-        }
-    }
-
-    //{
-    //    Vertex verts[4] = {
-    //        {{ 0.0f,  0.0f}, {1.f, 0.f, 0.f}},
-    //        {{ 0.0f, -1.0f}, {0.f, 1.f, 0.f}},
-    //        {{ 1.0f, -1.0f}, {0.f, 0.f, 1.f}},
-    //        {{ 1.0f,  0.0f}, {0.f, 0.f, 1.f}},
-    //    };
-    //    PushLoop(state, &memory->transient, verts, 4);
-    //}
 
     // TODO: Text
     //PushText(&memory->transient, {20, 20}, {1,1,1,1}, "Health: 100");
