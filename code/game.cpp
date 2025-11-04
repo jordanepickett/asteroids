@@ -238,38 +238,6 @@ void DestoryEntity(Entity *entity) {
     entity->isActive = false;
 }
 
-void HandleCollision(GameState *state) {
-    for(int i = 0; i < MAX_ENTITIES; i++) {
-        Entity* a = &state->entities[i];
-        if(!a->isActive) continue;
-
-        for(int j = i + 1; j < MAX_ENTITIES; j++) {
-            Entity* b = &state->entities[j];
-            if(!b->isActive) continue;
-
-            float dx = a->transform.position.x - b->transform.position.x;
-            float dy = a->transform.position.y - b->transform.position.y;
-            float dist2 = dx*dx + dy*dy;
-
-            float r = a->radius + b->radius;
-
-            if(dist2 < r*r) {
-                if((a->type == ENTITY_MISSLE && b->type == ENTITY_ASTEROID) ||
-                    (a->type == ENTITY_ASTEROID && b->type == ENTITY_MISSLE)) {
-                    DestoryEntity(a);
-                    DestoryEntity(b);
-                }
-
-                if((a->type == ENTITY_PLAYER && b->type == ENTITY_ASTEROID) ||
-                    (a->type == ENTITY_ASTEROID && b->type == ENTITY_PLAYER)) {
-                    DestoryEntity(a);
-                    DestoryEntity(b);
-                }
-            }
-        }
-    }
-}
-
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     
     // Systems
@@ -373,7 +341,6 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
 
     UpdateEntities(state, frame);
     GameRender(state, memory);
-    //HandleCollision(state);
 }
 
 void UpdateEntities(GameState *state, PlatformFrame *frame) {
