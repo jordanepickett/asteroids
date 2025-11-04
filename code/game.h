@@ -55,6 +55,7 @@ typedef struct {
     FireMissleSystem *fireMissile;
     LifeTimeSystem *lifetime;
     AsteroidSystem *asteroid;
+    CollisionSystem *collision;
 } GameState;
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory);

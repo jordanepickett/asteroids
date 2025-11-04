@@ -9,6 +9,11 @@ static void MovementSystemInit(MovementSystem *m) {
     for (int i = 0; i < MAX_ENTITIES; ++i) m->id_to_index[i] = -1;
 }
 
+static void CollisionSystemInit(CollisionSystem *c) {
+    c->count = 0;
+    for (int i = 0; i < MAX_ENTITIES; ++i) c->id_to_index[i] = -1;
+}
+
 static void RenderSystemInit(RenderSystem *r) {
     r->count = 0;
     for (int i = 0; i < MAX_ENTITIES; ++i) r->id_to_index[i] = -1;
@@ -57,6 +62,18 @@ static EntityID CreateEntity2(GameState* state) {
     return id;
 }
 
+static void AddCollision(GameState *state, EntityID id, float size) {
+    printf("Adding Collision to: %i\n", id);
+    CollisionSystem *system = state->collision;
+    int idx = system->count++;
+    printf("Collision System Index: %i\n", idx);
+    system->ids[idx] = id;
+    system->size[idx] = size;
+    assert(id >= 0 && id < MAX_ENTITIES);
+    system->id_to_index[id] = idx;
+    state->entitiesReg->comp[id] |= COMP_COLLISION;
+}
+
 static void AddRender(GameState *state, EntityID id, Vertex *verts, int vertCount) {
     printf("Adding Render to: %i\n", id);
     RenderSystem *system = state->render;
@@ -88,10 +105,6 @@ static void AddMovement(
     assert(id >= 0 && id < MAX_ENTITIES);
     m->id_to_index[id] = idx;
     state->entitiesReg->comp[id] |= COMP_MOVEMENT;
-}
-
-static void AddCollision(GameState *state, EntityID id) {
-    state->entitiesReg->comp[id] |= COMP_COLLISION;
 }
 
 static void AddFireMissleSystem(GameState *state, EntityID id) {
@@ -203,6 +216,43 @@ static void PlayerInputUpdate(
     }
 }
 
+static void CollisionUpdate(
+    CollisionSystem *collisionSystem,
+    MovementSystem *movementSystem,
+    CollisionQueue *queue
+) {
+    for(int i = 0; i < collisionSystem->count; i++) {
+        EntityID entity = collisionSystem->ids[i];
+        //printf("index: %i, entity: %i\n", i, entity);
+        int movementIndex = movementSystem->id_to_index[entity];
+        for (int j = i+1; j < collisionSystem->count; ++j) {
+            if(entity == collisionSystem->ids[j]) {
+                continue;
+            }
+            EntityID entity2 = collisionSystem->ids[j];
+            int movementIndex2 = movementSystem->id_to_index[entity2];
+            float aX = movementSystem->pos[movementIndex].x;
+            float bX = movementSystem->pos[movementIndex2].x;
+
+            float aY = movementSystem->pos[movementIndex].y;
+            float bY = movementSystem->pos[movementIndex2].y;
+
+            float dx = aX - bX;
+            float dy = aY - bY;
+
+            float dist2 = dx*dx + dy*dy;
+
+            float r = collisionSystem->size[i] + collisionSystem->size[j];
+
+            if(dist2 < r*r) {
+                queue->events[queue->count].a = entity;
+                queue->events[queue->count].b = collisionSystem->ids[j];
+                queue->count++;
+            }
+        }
+    }
+}
+
 static void FireMissleUpdate(
     FireMissleSystem *system,
     PlatformFrame *frame,
@@ -283,6 +333,22 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
         }
         state->render->id_to_index[id] = -1;
         printf("Render count: %i\n", state->render->count);
+    }
+
+    {
+        int idx = state->collision->id_to_index[id];
+        if (idx != -1) {
+            int last = --state->collision->count;
+
+            if (idx != last) {
+                state->collision->ids[idx]   = state->collision->ids[last];
+                state->collision->size[idx]   = state->collision->size[last];
+
+                state->collision->id_to_index[state->collision->ids[idx]] = idx;
+            }
+        }
+        state->collision->id_to_index[id] = -1;
+        printf("Collision count: %i\n", state->collision->count);
     }
 }
 

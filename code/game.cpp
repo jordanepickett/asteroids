@@ -62,6 +62,7 @@ static void TrySpawnAsteroid(GameState* state) {
             AddMovement(state, a, pos, { 0, 1 }, vel);
             AddRender(state, a, ASTEROID, 4);
             AddAsteroid(state, a);
+            AddCollision(state, a, 1.0f);
 
             //a->radius = 20.0f + (rand() % 15); // random asteroid size
         }
@@ -278,11 +279,11 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     state->health = (HealthSystem*)ArenaAlloc(&memory->permanent, sizeof(HealthSystem));
     state->damage = (DamageSystem*)ArenaAlloc(&memory->permanent, sizeof(DamageSystem));
     state->cameraSys = (CameraSystem*)ArenaAlloc(&memory->permanent, sizeof(CameraSystem));
-    //state->render = ARENA_PUSH_STRUCT(arena, RenderQueue);
     state->playerInput = (PlayerInputSystem*)ArenaAlloc(&memory->permanent, sizeof(PlayerInputSystem));
     state->fireMissile = (FireMissleSystem*)ArenaAlloc(&memory->permanent, sizeof(FireMissleSystem));
     state->lifetime = (LifeTimeSystem*)ArenaAlloc(&memory->permanent, sizeof(LifeTimeSystem));
     state->asteroid = (AsteroidSystem*)ArenaAlloc(&memory->permanent, sizeof(AsteroidSystem));
+    state->collision = (CollisionSystem*)ArenaAlloc(&memory->permanent, sizeof(CollisionSystem));
 
     // Queues
     state->collisions = (CollisionQueue*)ArenaAlloc(&memory->permanent, sizeof(CollisionQueue));
@@ -300,6 +301,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     memset(state->fireMissile, 0, sizeof(FireMissleSystem));
     memset(state->lifetime, 0, sizeof(LifeTimeSystem));
     memset(state->asteroid, 0, sizeof(AsteroidSystem));
+    memset(state->collision, 0, sizeof(CollisionSystem));
 
     // Queues 0
     memset(state->collisions, 0, sizeof(CollisionQueue));
@@ -310,14 +312,10 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     HealthSystemInit(state->health);
     DamageSystemInit(state->damage);
     RenderSystemInit(state->render);
+    CollisionSystemInit(state->collision);
     //RenderQueueInit(g->render);
     //CollisionQueueInit(state->collisions);
 
-    Vertex verts[3] = {
-        {{ 0.0f,  1.0f}, {0.f, 1.f, 0.f}},
-        {{-1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-        {{ 1.0f, -1.0f}, {0.f, 1.f, 0.f}},
-    };
     EntityID player = CreateEntity2(state);
     glm::vec2 zero = { 0, 0};
     glm::vec2 rot = { 0, 1};
@@ -325,6 +323,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     AddRender(state, player, SHIP, 3);
     AddPlayerInput(state, player);
     AddFireMissleSystem(state, player);
+    AddCollision(state, player, 1.0f);
 
     float left   = -20.0f;
     float right  =  20.0f;
@@ -374,7 +373,7 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
 
     UpdateEntities(state, frame);
     GameRender(state, memory);
-    HandleCollision(state);
+    //HandleCollision(state);
 }
 
 void UpdateEntities(GameState *state, PlatformFrame *frame) {
@@ -389,6 +388,9 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
     // Systems
     MovementUpdate(state->movement, frame);
     LifeTimeUpdate(state, frame);
+
+    CollisionUpdate(state->collision, state->movement, state->collisions);
+    ProcessCollisions(state);
 
     if(state->camera.isLocked) {
         WrapSystem(state);
@@ -421,7 +423,7 @@ void GameRender(GameState *state, PlatformMemory *memory) {
             rot = movementSystem->rot[movementIndex];
             Vertex *verts = renderSystem->verts[renderIndex];
             int count = renderSystem->vertCount[renderIndex];
-            printf("movementIndex: %i, X: %f, Y: %f\n", movementIndex, pos.x, pos.y);
+            //printf("movementIndex: %i, X: %f, Y: %f\n", movementIndex, pos.x, pos.y);
 
             if(count == 3) {
                 PushTrianges2(state, &memory->transient, verts, count, pos, rot);

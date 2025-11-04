@@ -76,10 +76,17 @@ typedef struct {
 } DamageSystem;
 
 typedef struct {
-    EntityID ids[10];
+    EntityID ids[15];
     int count;
-    int id_to_index[10];
+    int id_to_index[15];
 } AsteroidSystem;
+
+typedef struct {
+    EntityID ids[MAX_ENTITIES];
+    float size[MAX_ENTITIES];
+    int count;
+    int id_to_index[MAX_ENTITIES];
+} CollisionSystem;
 
 typedef struct {
     EntityID freeList[MAX_ENTITIES];

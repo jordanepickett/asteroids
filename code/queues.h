@@ -4,7 +4,7 @@
 #include "glm/ext/vector_float2.hpp"
 
 typedef struct {
-    struct { EntityID a, b; } events[256];
+    struct { EntityID a, b; } events[20];
     int count;
 } CollisionQueue;
 
@@ -13,7 +13,7 @@ typedef struct {
         EntityID origin; 
         glm::vec2 offset;
         float lifeTime;
-    } events[256];
+    } events[20];
     int count;
 } ProjectileQueue;
 
