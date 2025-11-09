@@ -22,9 +22,10 @@ static void ProcessProjectileFire(GameState *state) {
         EntityID projectile = CreateEntity2(state);
         glm::vec2 pos = {
             originPos.x + originRot.x,
-            originPos.y + originRot.y + 5.0f,
+            originPos.y + originRot.y,
         };
 
+        AddTag(state, projectile, TAG_MISSLE);
         AddMovement(state, projectile, pos, originRot, originRot * 30.0f);
         AddRender(state, projectile, MISSLE, 4);
         AddLifeTimeSystem(state, projectile, lifeTime);
@@ -42,11 +43,24 @@ static void ProcessCollisions(GameState *state) {
     for(int i = 0; i < queue->count; i++) {
         EntityID a = queue->events[i].a;
         EntityID b = queue->events[i].b;
-        bool aIsAsteroid = state->entitiesReg->comp[a] & COMP_ASTEROID;
-        bool bIsAsteroid = state->entitiesReg->comp[b] & COMP_ASTEROID;
+
+        //TODO remove all this
+        bool aIsAsteroid = state->entitiesReg->comp[a] & COMP_FLOATABLE;
+        bool bIsAsteroid = state->entitiesReg->comp[b] & COMP_FLOATABLE;
         if(aIsAsteroid && bIsAsteroid) {
             continue;
         }
+        if(HasTag(state, a, TAG_PLAYER) || HasTag(state, b, TAG_PLAYER)) {
+            continue;
+        }
+        if(HasTag(state, a, TAG_MISSLE) && HasTag(state, b, TAG_MISSLE)) {
+            continue;
+        }
+
+        //TODO Fix this
+        // We can get into a state where a potentially collided with 2 things
+        // which means they will be in the toDelete list twice and causing the delete
+        // count to increment twice for 1 entitiy.
         state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = a;
         state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = b;
         printf("A: %i\n", a);

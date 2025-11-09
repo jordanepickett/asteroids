@@ -9,6 +9,11 @@ static void MovementSystemInit(MovementSystem *m) {
     for (int i = 0; i < MAX_ENTITIES; ++i) m->id_to_index[i] = -1;
 }
 
+static void LifetimeSystemInit(LifeTimeSystem *l) {
+    l->count = 0;
+    for (int i = 0; i < 10; ++i) l->id_to_index[i] = -1;
+}
+
 static void CollisionSystemInit(CollisionSystem *c) {
     c->count = 0;
     for (int i = 0; i < MAX_ENTITIES; ++i) c->id_to_index[i] = -1;
@@ -29,9 +34,9 @@ static void DamageSystemInit(DamageSystem *d) {
     for (int i = 0; i < MAX_ENTITIES; ++i) d->id_to_index[i] = -1;
 }
 
-static void AsteroidSystemInit(AsteroidSystem *a) {
-    a->count = 0;
-    for (int i = 0; i < 10; ++i) a->id_to_index[i] = -1;
+static void FloatableSystemInit(FloatableSystem *f) {
+    f->count = 0;
+    for (int i = 0; i < 10; ++i) f->id_to_index[i] = -1;
 }
 
 static void EntityRegistryInit(EntityRegistry *e) {
@@ -58,8 +63,21 @@ static EntityID CreateEntity2(GameState* state) {
 
     state->entitiesReg->active[id] = 1;
     state->entitiesReg->comp[id] = COMP_NONE;
+    state->entitiesReg->tag[id] = TAG_NONE;
     printf("Creating Entity with ID: %i\n", id);
     return id;
+}
+
+static bool HasTag(GameState* state, EntityID id, TagMask tag) {
+    return state->entitiesReg->tag[id] & tag;
+}
+
+static void AddTag(GameState* state, EntityID id, TagMask tag) {
+    state->entitiesReg->tag[id] |= tag;
+}
+
+static void RemoveTag(GameState* state, EntityID id, TagMask tag) {
+    state->entitiesReg->tag[id] &= ~tag;
 }
 
 static void AddCollision(GameState *state, EntityID id, float size) {
@@ -142,16 +160,16 @@ static void AddPlayerInput(GameState *state, EntityID id) {
     state->entitiesReg->comp[id] |= COMP_PLAYER_INPUT;
 }
 
-static void AddAsteroid(GameState *state, EntityID id) {
-    printf("Adding Asteroid to: %i\n", id);
-    AsteroidSystem *system = state->asteroid;
+static void AddFloatable(GameState *state, EntityID id) {
+    printf("Adding Floatable to: %i\n", id);
+    FloatableSystem *system = state->floatable;
     int idx = system->count++;
-    printf("Asteroid Index: %i\n", idx);
+    printf("Floatable Index: %i\n", idx);
     system->ids[idx] = id;
     assert(id >= 0 && id < MAX_ENTITIES);
     //system->offset[idx] = offset;
     system->id_to_index[id] = idx;
-    state->entitiesReg->comp[id] |= COMP_ASTEROID;
+    state->entitiesReg->comp[id] |= COMP_FLOATABLE;
 }
 
 static void MovementUpdate(MovementSystem *system, PlatformFrame *frame) {
@@ -287,8 +305,8 @@ static void LifeTimeUpdate(GameState *state, PlatformFrame *frame) {
 static void RemoveEntityFromSystems(GameState *state, EntityID id) {
 
     {
-        int idx = state->movement->id_to_index[id];
-        if (idx != -1) {
+        if (state->entitiesReg->comp[id] & COMP_MOVEMENT) {
+            int idx = state->movement->id_to_index[id];
             int last = --state->movement->count;
             if (idx != last) {
                 state->movement->ids[idx]   = state->movement->ids[last];
@@ -298,13 +316,13 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
 
                 state->movement->id_to_index[state->movement->ids[idx]] = idx;
             }
+            state->movement->id_to_index[id] = -1;
         }
-        state->movement->id_to_index[id] = -1;
     }
 
     {
-        int idx = state->lifetime->id_to_index[id];
-        if (idx != -1) {
+        if (state->entitiesReg->comp[id] & COMP_LIFETIME) {
+            int idx = state->lifetime->id_to_index[id];
             int last = --state->lifetime->count;
 
             if (idx != last) {
@@ -313,14 +331,14 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
 
                 state->lifetime->id_to_index[state->lifetime->ids[idx]] = idx;
             }
+            state->lifetime->id_to_index[id] = -1;
+            printf("Lifetime count: %i\n", state->lifetime->count);
         }
-        state->lifetime->id_to_index[id] = -1;
-        printf("Lifetime count: %i\n", state->lifetime->count);
     }
 
     {
-        int idx = state->render->id_to_index[id];
-        if (idx != -1) {
+        if (state->entitiesReg->comp[id] & COMP_RENDER) {
+            int idx = state->render->id_to_index[id];
             int last = --state->render->count;
 
             if (idx != last) {
@@ -330,14 +348,14 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
 
                 state->render->id_to_index[state->render->ids[idx]] = idx;
             }
+            state->render->id_to_index[id] = -1;
+            printf("Render count: %i\n", state->render->count);
         }
-        state->render->id_to_index[id] = -1;
-        printf("Render count: %i\n", state->render->count);
     }
 
     {
-        int idx = state->collision->id_to_index[id];
-        if (idx != -1) {
+        if (state->entitiesReg->comp[id] & COMP_COLLISION) {
+            int idx = state->collision->id_to_index[id];
             int last = --state->collision->count;
 
             if (idx != last) {
@@ -346,9 +364,24 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
 
                 state->collision->id_to_index[state->collision->ids[idx]] = idx;
             }
+            state->collision->id_to_index[id] = -1;
+            printf("Collision count: %i\n", state->collision->count);
         }
-        state->collision->id_to_index[id] = -1;
-        printf("Collision count: %i\n", state->collision->count);
+    }
+
+    {
+        if (state->entitiesReg->comp[id] & COMP_FLOATABLE) {
+            int idx = state->floatable->id_to_index[id];
+            int last = --state->floatable->count;
+
+            if (idx != last) {
+                state->floatable->ids[idx]   = state->floatable->ids[last];
+
+                state->floatable->id_to_index[state->floatable->ids[idx]] = idx;
+            }
+            state->floatable->id_to_index[id] = -1;
+            printf("Floatable count: %i\n", state->floatable->count);
+        }
     }
 }
 

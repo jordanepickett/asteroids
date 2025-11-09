@@ -4,4 +4,4 @@
 
 typedef int32_t EntityID;
 #define INVALID_ENTITY_ID (-1)
-#define MAX_ENTITIES 64
+#define MAX_ENTITIES 32

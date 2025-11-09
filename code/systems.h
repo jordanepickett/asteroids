@@ -1,6 +1,7 @@
 #pragma once
 #include "defs.h"
 #include "components.h"
+#include "tags.h"
 #include "entity.h"
 #include <glm/glm.hpp>
 #include <glad/glad.h>
@@ -79,7 +80,7 @@ typedef struct {
     EntityID ids[15];
     int count;
     int id_to_index[15];
-} AsteroidSystem;
+} FloatableSystem;
 
 typedef struct {
     EntityID ids[MAX_ENTITIES];
@@ -92,6 +93,7 @@ typedef struct {
     EntityID freeList[MAX_ENTITIES];
     int freeCount;
     CompMask comp[MAX_ENTITIES];
+    TagMask tag[MAX_ENTITIES];
     int active[MAX_ENTITIES];
     int toDelete[MAX_ENTITIES];
     int deleteCount;

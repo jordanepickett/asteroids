@@ -54,7 +54,7 @@ typedef struct {
     PlayerInputSystem *playerInput;
     FireMissleSystem *fireMissile;
     LifeTimeSystem *lifetime;
-    AsteroidSystem *asteroid;
+    FloatableSystem *floatable;
     CollisionSystem *collision;
 } GameState;
 

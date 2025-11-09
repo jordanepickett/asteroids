@@ -12,6 +12,6 @@ enum {
     COMP_PLAYER_INPUT = 1 << 6,
     COMP_FIRE_MISSLE = 1 << 7,
     COMP_LIFETIME = 1 << 8,
-    COMP_ASTEROID = 1 << 9,
+    COMP_FLOATABLE = 1 << 9,
 };
 

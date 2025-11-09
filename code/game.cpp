@@ -18,7 +18,7 @@ float asteroidSpawnTimer = 0.0f;
 float playerSpawnTimer = 0.0f;
 
 static int CountAsteroids(GameState* state) {
-    return state->asteroid->count;
+    return state->floatable->count;
 }
 
 static void TrySpawnPlayer(GameState* state) {
@@ -45,7 +45,7 @@ static void TrySpawnAsteroid(GameState* state) {
     //printf("AMOUNT: %i \n", amount);
     if (amount >= 10) return;
 
-    while(amount <= 10) {
+    while(amount < 10) {
         EntityID a = CreateEntity2(state);
         if (a) {
             // random position at edges of screen
@@ -61,7 +61,7 @@ static void TrySpawnAsteroid(GameState* state) {
             glm::vec2 vel = { velX, velY };
             AddMovement(state, a, pos, { 0, 1 }, vel);
             AddRender(state, a, ASTEROID, 4);
-            AddAsteroid(state, a);
+            AddFloatable(state, a);
             AddCollision(state, a, 1.0f);
 
             //a->radius = 20.0f + (rand() % 15); // random asteroid size
@@ -250,7 +250,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     state->playerInput = (PlayerInputSystem*)ArenaAlloc(&memory->permanent, sizeof(PlayerInputSystem));
     state->fireMissile = (FireMissleSystem*)ArenaAlloc(&memory->permanent, sizeof(FireMissleSystem));
     state->lifetime = (LifeTimeSystem*)ArenaAlloc(&memory->permanent, sizeof(LifeTimeSystem));
-    state->asteroid = (AsteroidSystem*)ArenaAlloc(&memory->permanent, sizeof(AsteroidSystem));
+    state->floatable = (FloatableSystem*)ArenaAlloc(&memory->permanent, sizeof(FloatableSystem));
     state->collision = (CollisionSystem*)ArenaAlloc(&memory->permanent, sizeof(CollisionSystem));
 
     // Queues
@@ -268,7 +268,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     memset(state->playerInput, 0, sizeof(PlayerInputSystem));
     memset(state->fireMissile, 0, sizeof(FireMissleSystem));
     memset(state->lifetime, 0, sizeof(LifeTimeSystem));
-    memset(state->asteroid, 0, sizeof(AsteroidSystem));
+    memset(state->floatable, 0, sizeof(FloatableSystem));
     memset(state->collision, 0, sizeof(CollisionSystem));
 
     // Queues 0
@@ -276,6 +276,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     memset(state->projectile, 0, sizeof(ProjectileQueue));
 
     EntityRegistryInit(state->entitiesReg);
+    LifetimeSystemInit(state->lifetime);
     MovementSystemInit(state->movement);
     HealthSystemInit(state->health);
     DamageSystemInit(state->damage);
@@ -285,6 +286,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     //CollisionQueueInit(state->collisions);
 
     EntityID player = CreateEntity2(state);
+    AddTag(state, player, TAG_PLAYER);
     glm::vec2 zero = { 0, 0};
     glm::vec2 rot = { 0, 1};
     AddMovement(state, player, zero, rot, zero);
