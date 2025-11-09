@@ -61,8 +61,22 @@ static void ProcessCollisions(GameState *state) {
         // We can get into a state where a potentially collided with 2 things
         // which means they will be in the toDelete list twice and causing the delete
         // count to increment twice for 1 entitiy.
-        state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = a;
-        state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = b;
+        bool isEntityAQueued = false;
+        bool isEntityBQueued = false;
+        for(int i = 0; i < state->entitiesReg->deleteCount; i++) {
+            if (a == state->entitiesReg->toDelete[i]) {
+                isEntityAQueued = true;
+            }
+            if (b == state->entitiesReg->toDelete[i]) {
+                isEntityBQueued = true;
+            }
+        }
+        if(!isEntityAQueued) {
+            state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = a;
+        }
+        if(!isEntityBQueued) {
+            state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = b;
+        }
         printf("A: %i\n", a);
         printf("B: %i\n", b);
     }

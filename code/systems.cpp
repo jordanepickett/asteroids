@@ -241,6 +241,9 @@ static void CollisionUpdate(
 ) {
     for(int i = 0; i < collisionSystem->count; i++) {
         EntityID entity = collisionSystem->ids[i];
+        if (entity == -1) {
+            continue;
+        }
         //printf("index: %i, entity: %i\n", i, entity);
         int movementIndex = movementSystem->id_to_index[entity];
         for (int j = i+1; j < collisionSystem->count; ++j) {
