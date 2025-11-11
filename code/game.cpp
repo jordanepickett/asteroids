@@ -43,9 +43,9 @@ static void TrySpawnPlayer(GameState* state) {
 static void TrySpawnAsteroid(GameState* state) {
     int amount = CountAsteroids(state);
     //printf("AMOUNT: %i \n", amount);
-    if (amount >= 10) return;
+    if (amount >= MAX_FLOATABLES) return;
 
-    while(amount < 10) {
+    while(amount < MAX_FLOATABLES) {
         EntityID a = CreateEntity2(state);
         if (a) {
             // random position at edges of screen

@@ -7,10 +7,10 @@
 #include <glad/glad.h>
 
 typedef struct {
-    EntityID ids[20];
-    float lifetime[20];
+    EntityID ids[MAX_LIFETIMES];
+    float lifetime[MAX_LIFETIMES];
     int count;
-    int id_to_index[20];
+    int id_to_index[MAX_LIFETIMES];
 } LifeTimeSystem;
 
 typedef struct {
@@ -77,9 +77,9 @@ typedef struct {
 } DamageSystem;
 
 typedef struct {
-    EntityID ids[15];
+    EntityID ids[MAX_FLOATABLES];
     int count;
-    int id_to_index[15];
+    int id_to_index[MAX_FLOATABLES];
 } FloatableSystem;
 
 typedef struct {

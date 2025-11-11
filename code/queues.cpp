@@ -72,13 +72,13 @@ static void ProcessCollisions(GameState *state) {
             }
         }
         if(!isEntityAQueued) {
+            printf("A: %i\n", a);
             state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = a;
         }
         if(!isEntityBQueued) {
+            printf("B: %i\n", b);
             state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = b;
         }
-        printf("A: %i\n", a);
-        printf("B: %i\n", b);
     }
 
     // Reset the queue!!

@@ -11,7 +11,7 @@ static void MovementSystemInit(MovementSystem *m) {
 
 static void LifetimeSystemInit(LifeTimeSystem *l) {
     l->count = 0;
-    for (int i = 0; i < 10; ++i) l->id_to_index[i] = -1;
+    for (int i = 0; i < MAX_LIFETIMES; ++i) l->id_to_index[i] = -1;
 }
 
 static void CollisionSystemInit(CollisionSystem *c) {
@@ -36,7 +36,7 @@ static void DamageSystemInit(DamageSystem *d) {
 
 static void FloatableSystemInit(FloatableSystem *f) {
     f->count = 0;
-    for (int i = 0; i < 10; ++i) f->id_to_index[i] = -1;
+    for (int i = 0; i < MAX_FLOATABLES; ++i) f->id_to_index[i] = -1;
 }
 
 static void EntityRegistryInit(EntityRegistry *e) {
@@ -142,8 +142,8 @@ static void AddLifeTimeSystem(GameState *state, EntityID id, float lifeTime) {
     LifeTimeSystem *system = state->lifetime;
     int idx = system->count++;
     printf("Lifetime Index: %i\n", idx);
+    assert(idx >= 0 && idx < MAX_LIFETIMES);
     system->ids[idx] = id;
-    assert(id >= 0 && id < MAX_ENTITIES);
     system->lifetime[idx] = lifeTime;
     system->id_to_index[id] = idx;
     state->entitiesReg->comp[id] |= COMP_LIFETIME;
@@ -165,8 +165,8 @@ static void AddFloatable(GameState *state, EntityID id) {
     FloatableSystem *system = state->floatable;
     int idx = system->count++;
     printf("Floatable Index: %i\n", idx);
+    assert(idx >= 0 && idx < MAX_FLOATABLES);
     system->ids[idx] = id;
-    assert(id >= 0 && id < MAX_ENTITIES);
     //system->offset[idx] = offset;
     system->id_to_index[id] = idx;
     state->entitiesReg->comp[id] |= COMP_FLOATABLE;
@@ -242,6 +242,7 @@ static void CollisionUpdate(
     for(int i = 0; i < collisionSystem->count; i++) {
         EntityID entity = collisionSystem->ids[i];
         if (entity == -1) {
+            printf("INDEX IS NOT REAL ENTITY: %i\n", i);
             continue;
         }
         //printf("index: %i, entity: %i\n", i, entity);
@@ -335,7 +336,7 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
                 state->lifetime->id_to_index[state->lifetime->ids[idx]] = idx;
             }
             state->lifetime->id_to_index[id] = -1;
-            printf("Lifetime count: %i\n", state->lifetime->count);
+            //printf("Lifetime count: %i\n", state->lifetime->count);
         }
     }
 
@@ -352,7 +353,7 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
                 state->render->id_to_index[state->render->ids[idx]] = idx;
             }
             state->render->id_to_index[id] = -1;
-            printf("Render count: %i\n", state->render->count);
+            //printf("Render count: %i\n", state->render->count);
         }
     }
 
@@ -361,13 +362,14 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
             int idx = state->collision->id_to_index[id];
             int last = --state->collision->count;
 
-            if (idx != last) {
+            printf("Setting last collision %i replacing %i\n", state->collision->ids[last], state->collision->ids[idx]);
+            if(idx != last) {
                 state->collision->ids[idx]   = state->collision->ids[last];
                 state->collision->size[idx]   = state->collision->size[last];
 
                 state->collision->id_to_index[state->collision->ids[idx]] = idx;
+                state->collision->id_to_index[id] = -1;
             }
-            state->collision->id_to_index[id] = -1;
             printf("Collision count: %i\n", state->collision->count);
         }
     }
@@ -383,7 +385,7 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
                 state->floatable->id_to_index[state->floatable->ids[idx]] = idx;
             }
             state->floatable->id_to_index[id] = -1;
-            printf("Floatable count: %i\n", state->floatable->count);
+            //printf("Floatable count: %i\n", state->floatable->count);
         }
     }
 }
