@@ -18,7 +18,13 @@ float asteroidSpawnTimer = 0.0f;
 float playerSpawnTimer = 0.0f;
 
 static int CountAsteroids(GameState* state) {
-    return state->floatable->count;
+    int count = 0;
+    for(int i = 0; i < state->entitiesReg->count; i++) {
+        if(state->entitiesReg->comp[i] & COMP_FLOATABLE) {
+            count++;
+        }
+    }
+    return count;
 }
 
 static void TrySpawnPlayer(GameState* state) {
@@ -188,15 +194,17 @@ inline void WrapSystem(GameState* state) {
 
     MovementSystem* movementSystem = state->movement;
     for(int i = 0; i < state->entitiesReg->count; i++) {
-        int movementIndex = movementSystem->id_to_index[i];
-        glm::vec2 pos = movementSystem->pos[movementIndex];
+        if(!(state->entitiesReg->comp[i] & COMP_MOVEMENT)) {
+            continue;
+        }
+        glm::vec2 pos = movementSystem->pos[i];
         if (pos.x > right)       pos.x = left;
         else if (pos.x < left)   pos.x = right;
 
         if (pos.y > top)         pos.y = bottom;
         else if (pos.y < bottom) pos.y = top;
 
-        movementSystem->pos[movementIndex] = pos;
+        movementSystem->pos[i] = pos;
     }
 
 }
@@ -275,13 +283,13 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     memset(state->collisions, 0, sizeof(CollisionQueue));
     memset(state->projectile, 0, sizeof(ProjectileQueue));
 
-    EntityRegistryInit(state->entitiesReg);
-    LifetimeSystemInit(state->lifetime);
-    MovementSystemInit(state->movement);
-    HealthSystemInit(state->health);
-    DamageSystemInit(state->damage);
-    RenderSystemInit(state->render);
-    CollisionSystemInit(state->collision);
+    //EntityRegistryInit(state->entitiesReg);
+    //LifetimeSystemInit(state->lifetime);
+    //MovementSystemInit(state->movement);
+    //HealthSystemInit(state->health);
+    //DamageSystemInit(state->damage);
+    //RenderSystemInit(state->render);
+    //CollisionSystemInit(state->collision);
     //RenderQueueInit(g->render);
     //CollisionQueueInit(state->collisions);
 
@@ -349,16 +357,16 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
     //printf("entity count: %i\n", state->entitiesReg->count);
 
     // Inputs
-    PlayerInputUpdate(state->playerInput, state->movement, frame);
-    FireMissleUpdate(state->fireMissile, frame, state->projectile);
+    PlayerInputUpdate(state, frame);
+    FireMissleUpdate(state, frame);
     // Queue processors
     ProcessProjectileFire(state);
 
     // Systems
-    MovementUpdate(state->movement, frame);
+    MovementUpdate(state, frame);
     LifeTimeUpdate(state, frame);
 
-    CollisionUpdate(state->collision, state->movement, state->collisions);
+    CollisionUpdate(state, state->collisions);
     ProcessCollisions(state);
 
     if(state->camera.isLocked) {
@@ -383,15 +391,14 @@ void GameRender(GameState *state, PlatformMemory *memory) {
     RenderSystem *renderSystem = state->render;
 
     for(int i = 0; i < state->entitiesReg->count; i++) {
-        int movementIndex = movementSystem->id_to_index[i];
-        int renderIndex = renderSystem->id_to_index[i];
-        if (movementIndex != -1 && renderIndex != -1) {
+        if((state->entitiesReg->comp[i] & (COMP_RENDER | COMP_MOVEMENT))) {
+
             glm::vec2 pos = {0,0};
             glm::vec2 rot = {0,1};
-            pos = movementSystem->pos[movementIndex];
-            rot = movementSystem->rot[movementIndex];
-            Vertex *verts = renderSystem->verts[renderIndex];
-            int count = renderSystem->vertCount[renderIndex];
+            pos = movementSystem->pos[i];
+            rot = movementSystem->rot[i];
+            Vertex *verts = renderSystem->verts[i];
+            int count = renderSystem->vertCount[i];
             //printf("movementIndex: %i, X: %f, Y: %f\n", movementIndex, pos.x, pos.y);
 
             if(count == 3) {
@@ -399,7 +406,7 @@ void GameRender(GameState *state, PlatformMemory *memory) {
             } else {
                 PushLoop2(state, &memory->transient, verts, count, pos, rot);
             }
-        } 
+        }
     }
 
     // TODO: Text

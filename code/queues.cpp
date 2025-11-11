@@ -15,9 +15,8 @@ static void ProcessProjectileFire(GameState *state) {
         float lifeTime = queue->events[i].lifeTime;
         if (!state->entitiesReg->active[origin]) continue;
 
-        int movementIndex = movement->id_to_index[origin];
-        glm::vec2 originPos = movement->pos[movementIndex];
-        glm::vec2 originRot = movement->rot[movementIndex];
+        glm::vec2 originPos = movement->pos[origin];
+        glm::vec2 originRot = movement->rot[origin];
 
         EntityID projectile = CreateEntity2(state);
         glm::vec2 pos = {
