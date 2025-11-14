@@ -26,6 +26,7 @@ static void ProcessProjectileFire(GameState *state) {
 
         AddTag(state, projectile, TAG_MISSLE);
         AddMovement(state, projectile, pos, originRot, originRot * 30.0f);
+        AddDamage(state, projectile, 1.0f, TAG_ASTEROID);
         AddRender(state, projectile, MISSLE, 4);
         AddLifeTimeSystem(state, projectile, lifeTime);
         AddCollision(state, projectile, 1.0f);
@@ -33,6 +34,20 @@ static void ProcessProjectileFire(GameState *state) {
 
     // Reset the queue!!
     queue->count = 0;
+}
+
+inline void CheckAndDeleteEntity(GameState *state, EntityID id) {
+
+    bool isEntityQueued = false;
+    for(int i = 0; i < state->entitiesReg->deleteCount; i++) {
+        if (id == state->entitiesReg->toDelete[i]) {
+            isEntityQueued = true;
+        }
+    }
+    if(!isEntityQueued) {
+        printf("Queued To Die: %i\n", id);
+        state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = id;
+    }
 }
 
 static void ProcessCollisions(GameState *state) {
@@ -43,40 +58,16 @@ static void ProcessCollisions(GameState *state) {
         EntityID a = queue->events[i].a;
         EntityID b = queue->events[i].b;
 
-        //TODO remove all this
-        bool aIsAsteroid = state->entitiesReg->comp[a] & COMP_FLOATABLE;
-        bool bIsAsteroid = state->entitiesReg->comp[b] & COMP_FLOATABLE;
-        if(aIsAsteroid && bIsAsteroid) {
-            continue;
-        }
-        if(HasTag(state, a, TAG_PLAYER) || HasTag(state, b, TAG_PLAYER)) {
-            continue;
-        }
-        if(HasTag(state, a, TAG_MISSLE) && HasTag(state, b, TAG_MISSLE)) {
-            continue;
+        if(state->entitiesReg->comp[a] & COMP_DAMAGE) {
+            if(state->damage->tags[a] & state->entitiesReg->tag[b]) {
+                CheckAndDeleteEntity(state, b);
+            }
         }
 
-        //TODO Fix this
-        // We can get into a state where a potentially collided with 2 things
-        // which means they will be in the toDelete list twice and causing the delete
-        // count to increment twice for 1 entitiy.
-        bool isEntityAQueued = false;
-        bool isEntityBQueued = false;
-        for(int i = 0; i < state->entitiesReg->deleteCount; i++) {
-            if (a == state->entitiesReg->toDelete[i]) {
-                isEntityAQueued = true;
+        if(state->entitiesReg->comp[b] & COMP_DAMAGE) {
+            if(state->damage->tags[b] & state->entitiesReg->tag[a]) {
+                CheckAndDeleteEntity(state, a);
             }
-            if (b == state->entitiesReg->toDelete[i]) {
-                isEntityBQueued = true;
-            }
-        }
-        if(!isEntityAQueued) {
-            printf("A: %i\n", a);
-            state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = a;
-        }
-        if(!isEntityBQueued) {
-            printf("B: %i\n", b);
-            state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = b;
         }
     }
 

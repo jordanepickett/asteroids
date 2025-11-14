@@ -55,6 +55,7 @@ typedef struct {
 
 typedef struct {
     float damage[MAX_ENTITIES];
+    TagMask tags[MAX_ENTITIES];
     unsigned char present[MAX_ENTITIES];
 } DamageSystem;
 

@@ -66,6 +66,8 @@ static void TrySpawnAsteroid(GameState* state) {
             float velY  = sinf(angle) * speed;
             glm::vec2 vel = { velX, velY };
             AddMovement(state, a, pos, { 0, 1 }, vel);
+            AddTag(state, a, TAG_ASTEROID);
+            AddDamage(state, a, 1.0f, TAG_PLAYER|TAG_MISSLE);
             AddRender(state, a, ASTEROID, 4);
             AddFloatable(state, a);
             AddCollision(state, a, 1.0f);

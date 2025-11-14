@@ -91,6 +91,16 @@ static void AddRender(GameState *state, EntityID id, Vertex *verts, int vertCoun
     state->entitiesReg->comp[id] |= COMP_RENDER;
 }
 
+static void AddDamage(GameState *state, EntityID id, float amount, TagMask canHit) {
+    printf("Adding Damage to: %i\n", id);
+    assert(id >= 0 && id < MAX_ENTITIES);
+    DamageSystem *system = state->damage;
+    system->tags[id] = canHit;
+    system->damage[id] = amount;
+    system->present[id] = 1;
+    state->entitiesReg->comp[id] |= COMP_DAMAGE;
+}
+
 static void AddMovement(
     GameState *state,
     EntityID id,
