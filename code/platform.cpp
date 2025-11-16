@@ -211,7 +211,7 @@ void PlatformRunGameLoop(PlatformAPI *api,
         renderer->ratio = renderer->width / (float) renderer->height;
 
         GameUpdate(game, &frame, &memory);
-        GameRender(game, &memory);
+        GameRender(game, &memory, &frame);
 
         PlatformRender(renderer, game->commands, game->renderCommandsCount);
 

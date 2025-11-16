@@ -34,8 +34,6 @@ struct Camera {
 };
 
 typedef struct {
-    GLuint vao;
-
     void* commands;
     int renderCommandsCount;
     Entity *entities;
@@ -60,7 +58,7 @@ typedef struct {
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory);
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory);
-void GameRender(GameState *state, PlatformMemory *memory);
+void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame);
 Entity* CreateEntity(GameState *state, EntityType entity);
 void DestoryEntity(Entity* entity);
 void HandleCollision(GameState *state);

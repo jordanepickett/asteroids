@@ -62,8 +62,6 @@ struct Program {
 };
 
 struct PlatformRenderer {
-    GLuint vertexBuffer, vertexShader, fragmentShader, program, vao;
-    GLint mvpLocation, vposLocation, vcolLocation;
     Program* textProgram;
     Program* vertexProgram;
     float ratio;

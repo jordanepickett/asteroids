@@ -6,6 +6,7 @@
 #include "queues.cpp"
 #include "render_commands.h"
 #include "systems.h"
+#include <cstdarg>
 #include <cstdio>
 #include <cstring>
 #include <glad/glad.h>
@@ -90,6 +91,16 @@ inline void PushText(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::v
     cmd->length = (int)len;
     char* dst = (char*)cmd + sizeof(RenderCommandDrawText);
     memcpy(dst, str, len + 1);
+}
+
+static void PushTextf(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* fmt, ...) {
+    char buffer[512];
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+    
+    PushText(state, arena, pos, color, buffer);
 }
 
 inline void PushTrianges2(
@@ -339,7 +350,7 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
     }
 
     UpdateEntities(state, frame);
-    GameRender(state, memory);
+    //GameRender(state, memory, frame);
 }
 
 void UpdateEntities(GameState *state, PlatformFrame *frame) {
@@ -367,7 +378,7 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
 
 }
 
-void GameRender(GameState *state, PlatformMemory *memory) {
+void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) {
     ArenaReset(&memory->transient);
 
     // Clear
@@ -399,7 +410,8 @@ void GameRender(GameState *state, PlatformMemory *memory) {
     }
 
     // TODO: Text
-    PushText(state, &memory->transient, {10, 50}, {1,1,1,1}, "Health: 100");
+    PushTextf(state, &memory->transient, {10, 50}, {1,1,1,1}, "FPS: %f", (1.0f * frame->deltaTime));
+
 
     state->commands = memory->transient.base;
     state->renderCommandsCount = memory->transient.used;
