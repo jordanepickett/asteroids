@@ -8,6 +8,27 @@
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
+static const char* vertexShaderText =
+"#version 330\n"
+"uniform mat4 MVP;\n"
+"in vec3 vCol;\n"
+"in vec2 vPos;\n"
+"out vec3 color;\n"
+"void main()\n"
+"{\n"
+"    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
+"    color = vCol;\n"
+"}\n";
+ 
+static const char* fragmentShaderText =
+"#version 330\n"
+"in vec3 color;\n"
+"out vec4 fragment;\n"
+"void main()\n"
+"{\n"
+"    fragment = vec4(color, 1.0);\n"
+"}\n";
+
 static const char* textVertexShader =
 "#version 330\n"
 "uniform mat4 MVP;\n"
@@ -44,6 +65,7 @@ struct PlatformRenderer {
     GLuint vertexBuffer, vertexShader, fragmentShader, program, vao;
     GLint mvpLocation, vposLocation, vcolLocation;
     Program* textProgram;
+    Program* vertexProgram;
     float ratio;
     int width, height;
     Font font;

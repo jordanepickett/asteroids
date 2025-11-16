@@ -1,4 +1,5 @@
 #include "text_shader.cpp"
+#include "vertex_shader.cpp"
 #include "entity.h"
 #include "font.h"
 #include "game.h"
@@ -44,56 +45,22 @@ static float ApplyDeadzone(float value, float deadzone) {
     return adjusted * sign;
 }
 
-void PlatformInit(PlatformRenderer *renderer, const char* vertexShaderText, const char* fragmentShaderText) {
+void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
 
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         // Error handling
         return;
     }
 
-    glGenBuffers(1, &renderer->vertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexBuffer);
+    //Vertex Shader
+    Program* vertexProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
+    renderer->vertexProgram = vertexProgram;
+    VertexShaderInit(renderer, vertexShaderText, fragmentShaderText);
 
-    renderer->vertexShader = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(renderer->vertexShader, 1, &vertexShaderText, NULL);
-    glCompileShader(renderer->vertexShader);
-
-    renderer->fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(renderer->fragmentShader, 1, &fragmentShaderText, NULL);
-    glCompileShader(renderer->fragmentShader);
-
-    renderer->program = glCreateProgram();
-    glAttachShader(renderer->program, renderer->vertexShader);
-    glAttachShader(renderer->program, renderer->fragmentShader);
-    glLinkProgram(renderer->program);
-
-    renderer->mvpLocation = glGetUniformLocation(renderer->program, "MVP");
-    renderer->vposLocation = glGetAttribLocation(renderer->program, "vPos");
-    renderer->vcolLocation = glGetAttribLocation(renderer->program, "vCol");
-
-    glGenVertexArrays(1, &renderer->vao);
-    glBindVertexArray(renderer->vao);
-
-    // position attribute
-    glEnableVertexAttribArray(renderer->vposLocation);
-    glVertexAttribPointer(
-        renderer->vposLocation,
-        2, GL_FLOAT, GL_FALSE,
-        sizeof(Vertex), 
-        (void*)offsetof(Vertex, position)
-    );
-
-    // color attribute
-    glEnableVertexAttribArray(renderer->vcolLocation);
-    glVertexAttribPointer(
-        renderer->vcolLocation,
-        3, GL_FLOAT, GL_FALSE,
-        sizeof(Vertex),
-        (void*)offsetof(Vertex, color)
-    );
-
-    // unbind VAO (keeps state stored in VAO)
-    glBindVertexArray(0);
+    //Texture Shader
+    Program* textProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
+    renderer->textProgram = textProgram;
+    TextShaderInit(renderer, textVertexShader, textFragmentShader);
 
     // Load font
     Font font;
@@ -131,7 +98,6 @@ void PlatformRunGameLoop(PlatformAPI *api,
     glfwSetKeyCallback(window, KeyCallback);
     glfwSwapInterval(1);
 
-    PlatformInit(renderer, vertexShaderText, fragmentShaderText);
 
     const size_t PERM_SIZE = 64 * 1024 * 1024;
     const size_t TRANS_SIZE = 64 * 1024 * 1024;
@@ -144,13 +110,10 @@ void PlatformRunGameLoop(PlatformAPI *api,
     ArenaInit(&memory.transient, transMem, TRANS_SIZE);
 
 
+    PlatformInit(renderer, &memory);
     GameState* game = (GameState*)ArenaAlloc(&memory.permanent, sizeof(GameState));
     GameInit(game, api, &memory);
 
-    //Texture Shader
-    Program* textProgram = (Program*)ArenaAlloc(&memory.permanent, sizeof(Program));
-    renderer->textProgram = textProgram;
-    TextShaderInit(renderer, textVertexShader, textFragmentShader);
 
     double lastFrameTime = 0.0;
 
@@ -357,13 +320,13 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
                 //glm::mat4 proj = glm::ortho(-renderer->ratio, renderer->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
                 glm::mat4 mvp = d->mvp * model;
 
-                glUseProgram(renderer->program);
-                glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexBuffer);
+                glUseProgram(renderer->vertexProgram->program);
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexProgram->vbo);
 
                 glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
-                glUniformMatrix4fv(renderer->mvpLocation, 1, GL_FALSE, (const GLfloat*)&mvp);
+                glUniformMatrix4fv(renderer->vertexProgram->mvpLocation, 1, GL_FALSE, (const GLfloat*)&mvp);
 
-                glBindVertexArray(renderer->vao);
+                glBindVertexArray(renderer->vertexProgram->vao);
                 glDrawArrays(GL_TRIANGLES, 0, d->vertexCount);
 
                 glBindVertexArray(0);
@@ -378,13 +341,13 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
                 //glm::mat4 proj = glm::ortho(-renderer->ratio, renderer->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
                 glm::mat4 mvp = d->mvp * model;
 
-                glUseProgram(renderer->program);
-                glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexBuffer);
+                glUseProgram(renderer->vertexProgram->program);
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexProgram->vbo);
 
                 glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
-                glUniformMatrix4fv(renderer->mvpLocation, 1, GL_FALSE, (const GLfloat*)&mvp);
+                glUniformMatrix4fv(renderer->vertexProgram->mvpLocation, 1, GL_FALSE, (const GLfloat*)&mvp);
 
-                glBindVertexArray(renderer->vao);
+                glBindVertexArray(renderer->vertexProgram->vao);
                 glDrawArrays(GL_LINE_LOOP, 0, d->vertexCount);
 
                 glBindVertexArray(0);
