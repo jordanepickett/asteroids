@@ -1,4 +1,6 @@
+#include "text_shader.cpp"
 #include "entity.h"
+#include "font.h"
 #include "game.h"
 #include "memory.h"
 #include "render_commands.h"
@@ -92,6 +94,16 @@ void PlatformInit(PlatformRenderer *renderer, const char* vertexShaderText, cons
 
     // unbind VAO (keeps state stored in VAO)
     glBindVertexArray(0);
+
+    // Load font
+    Font font;
+    bool isLoaded = LoadFont(&font, "pixel.ttf", 32.0f);
+    if(isLoaded) {
+        printf("Font loaded.\n");
+        renderer->font = font;
+    } else {
+        printf("Font not loaded.\n");
+    }
 }
 
 void PlatformRunGameLoop(PlatformAPI *api,
@@ -134,6 +146,11 @@ void PlatformRunGameLoop(PlatformAPI *api,
 
     GameState* game = (GameState*)ArenaAlloc(&memory.permanent, sizeof(GameState));
     GameInit(game, api, &memory);
+
+    //Texture Shader
+    Program* textProgram = (Program*)ArenaAlloc(&memory.permanent, sizeof(Program));
+    renderer->textProgram = textProgram;
+    TextShaderInit(renderer, textVertexShader, textFragmentShader);
 
     double lastFrameTime = 0.0;
 
@@ -246,6 +263,69 @@ void PlatformRunGameLoop(PlatformAPI *api,
     glfwTerminate();
 }
 
+static void DrawQuadTextured(
+    PlatformRenderer* renderer,
+    float x0, float y0,
+    float x1, float y1,
+    float s0, float t0,
+    float s1, float t1,
+    const float color[4]
+)
+{
+    TextVertex verts[6] = {
+        {{ x0, y0 }, s0, t0, { color[0], color[1], color[2], color[3] }},
+        {{x1, y0 }, s1, t0, { color[0], color[1], color[2], color[3] }},
+        {{x1, y1 }, s1, t1, { color[0], color[1], color[2], color[3] }},
+        
+        {{ x0, y0 }, s0, t0, { color[0], color[1], color[2], color[3] }},
+        {{ x1, y1 }, s1, t1, { color[0], color[1], color[2], color[3] }},
+        {{ x0, y1 }, s0, t1, { color[0], color[1], color[2], color[3] }}
+    };
+    
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->textProgram->vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_TRIANGLES, 0, 6);}
+
+static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 pos, glm::vec4 color, glm::mat4 mvp) {
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    
+    glUseProgram(renderer->textProgram->program);
+    glBindVertexArray(renderer->textProgram->vao);
+    glBindTexture(GL_TEXTURE_2D, renderer->font.texture_id);
+    
+    glUniformMatrix4fv(renderer->textProgram->mvpLocation, 1, GL_FALSE, &mvp[0][0]);
+    glUniform1i(renderer->textProgram->location, 0); // Use texture unit 0
+
+    float x = pos.x;
+    float y = pos.y;
+    const float col[4] = {color.r, color.g, color.b, color.a};
+
+    for (int i = 0; text[i]; i++) {
+        char c = text[i];
+        if (c < 32 || c > 126) continue;
+        
+        const stbtt_bakedchar& g = renderer->font.glyphs[c - 32];
+        
+        float x0 = x + g.xoff;
+        float y0 = y + g.yoff;
+        float x1 = x0 + (g.x1 - g.x0);
+        float y1 = y0 + (g.y1 - g.y0);
+
+        float s0 = g.x0 / (float)renderer->font.atlas_w;
+        float t0 = g.y0 / (float)renderer->font.atlas_h;
+        float s1 = g.x1 / (float)renderer->font.atlas_w;
+        float t1 = g.y1 / (float)renderer->font.atlas_h;
+
+        DrawQuadTextured(renderer, x0, y0, x1, y1, s0, t0, s1, t1, col);
+
+        x += g.xadvance;
+    }
+    
+    glBindVertexArray(0);
+    glDisable(GL_BLEND);
+}
 
 void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
 
@@ -310,16 +390,16 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
                 glBindVertexArray(0);
             } break;
             case RENDER_CMD_DRAW_TEXT: {
-                /*
                 auto* t = (RenderCommandDrawText*)ptr;
                 const char* str = (char*)t + sizeof(RenderCommandDrawText);
-                RenderTextWithFontAtlas(str, t->position, t->color);
-                    */
+                glm::mat4 textMVP = glm::ortho(0.0f, (float)renderer->width, 
+                                               (float)renderer->height, 0.0f, 
+                                               -1.0f, 1.0f);
+                RenderText(renderer, str, t->position, t->color, textMVP);
             } break;
         }
 
         ptr += header->size; // move to next command
     }
 }
-
 

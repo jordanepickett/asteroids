@@ -16,5 +16,3 @@ typedef struct {
     } events[20];
     int count;
 } ProjectileQueue;
-
-static void CollisionQueueInit(CollisionQueue *q); 

@@ -2,7 +2,8 @@
 #define M_PI 3.14159265358979323846f
 #define GLAD_GL_IMPLEMENTATION
 #define GLFW_INCLUDE_NONE
-#include "platform.h"
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
 
 static const char* vertexShaderText =
 "#version 330\n"
@@ -24,6 +25,7 @@ static const char* fragmentShaderText =
 "{\n"
 "    fragment = vec4(color, 1.0);\n"
 "}\n";
+
 
 int main() {
     PlatformAPI platform = {0};

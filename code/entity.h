@@ -24,6 +24,12 @@ struct Vertex {
     glm::vec3 color;
 };
 
+struct TextVertex {
+    glm::vec2 position;
+    float u, v;
+    glm::vec4 color;
+};
+
 struct Entity {
     EntityType type;
     bool isActive;

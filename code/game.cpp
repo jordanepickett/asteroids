@@ -79,7 +79,7 @@ static void TrySpawnAsteroid(GameState* state) {
 
 }
 
-inline void PushText(MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* str) {
+inline void PushText(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* str) {
     size_t len = strlen(str);
     size_t size = sizeof(RenderCommandDrawText) + len + 1;
     auto* cmd = (RenderCommandDrawText*)ArenaAlloc(arena, size);
@@ -322,19 +322,6 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
         glm::vec3(0.0f, 1.0f, 0.0f)         // up
     );
     state->camera.isLocked = true;
-    //state->player.rotation = glm::vec2(0.0f, 1.0f);
-
-    state->entities = (Entity*)ArenaAlloc(&memory->permanent, sizeof(Entity) * MAX_ENTITIES);
-    //state->freeEntityCount = MAX_ENTITIES;
-    for(int i = 0; i < MAX_ENTITIES; i++) {
-        //state->freeEntitiesList[i] = MAX_ENTITIES - 1 - i;
-        
-        state->entities[i] = {};
-        state->entities[i].isActive = false;
-        state->entities[i].type = ENTITY_NONE;
-    }
-
-    //CreateEntity(state, ENTITY_PLAYER);
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -347,7 +334,7 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
 
     playerSpawnTimer -= frame->deltaTime;
     if (playerSpawnTimer <= 0.0f) {
-        TrySpawnPlayer(state);
+        //TrySpawnPlayer(state);
         playerSpawnTimer = 5.0f;
     }
 
@@ -412,7 +399,7 @@ void GameRender(GameState *state, PlatformMemory *memory) {
     }
 
     // TODO: Text
-    //PushText(&memory->transient, {20, 20}, {1,1,1,1}, "Health: 100");
+    PushText(state, &memory->transient, {10, 50}, {1,1,1,1}, "Health: 100");
 
     state->commands = memory->transient.base;
     state->renderCommandsCount = memory->transient.used;
