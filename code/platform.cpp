@@ -1,5 +1,6 @@
 #include "text_shader.cpp"
 #include "vertex_shader.cpp"
+#include "base_post_shader.cpp"
 #include "entity.h"
 #include "font.h"
 #include "game.h"
@@ -61,6 +62,11 @@ void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
     Program* textProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
     renderer->textProgram = textProgram;
     TextShaderInit(renderer, textVertexShader, textFragmentShader);
+
+    //Base Post Shader
+    Program* basePostProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
+    renderer->basePostProgram = basePostProgram;
+    BasePostShaderInit(renderer, basePostShader, basePostFragment);
 
     {
         // Load font title font
@@ -278,7 +284,7 @@ static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 p
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    Font* usedFont = &renderer->fontDebug;
+    Font* usedFont = &renderer->fontUI;
     glUseProgram(renderer->textProgram->program);
     glBindVertexArray(renderer->textProgram->vao);
     glBindTexture(GL_TEXTURE_2D, usedFont->texture_id);
@@ -320,7 +326,11 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
     uint8_t* ptr = (uint8_t*)buffer;
     uint8_t* end = ptr + size;
 
-    glViewport(0, 0, renderer->width, renderer->height);
+    // Store text commands for later
+    std::vector<RenderCommandDrawText*> textCommands;
+
+    glBindFramebuffer(GL_FRAMEBUFFER, renderer->frameBuffer);
+    glViewport(0, 0, INTERNAL_WIDTH, INTERNAL_HEIGHT);
 
     while (ptr < end) {
         RenderCommandHeader* header = (RenderCommandHeader*)ptr;
@@ -362,6 +372,11 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
                 void* verts = (uint8_t*)d + sizeof(RenderCommandDrawTriangles);
                 glm::mat4 model = glm::mat4(1.0f);
                 model = glm::translate(model, glm::vec3(-d->pos.x, d->pos.y, 0.0f));
+
+                glm::vec2 right(d->rotation.y, -d->rotation.x);  // perpendicular vector
+                model[0][0] = right.x;  model[1][0] = right.y;
+                model[0][1] = d->rotation.x; model[1][1] = d->rotation.y;
+
                 //model = glm::rotate(model, (float)glfwGetTime(), glm::vec3(0.0f, 0.0f, 1.0f));
                 //glm::mat4 proj = glm::ortho(-renderer->ratio, renderer->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
                 glm::mat4 mvp = d->mvp * model;
@@ -379,15 +394,26 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
             } break;
             case RENDER_CMD_DRAW_TEXT: {
                 auto* t = (RenderCommandDrawText*)ptr;
-                const char* str = (char*)t + sizeof(RenderCommandDrawText);
-                glm::mat4 textMVP = glm::ortho(0.0f, (float)renderer->width, 
-                                               (float)renderer->height, 0.0f, 
-                                               -1.0f, 1.0f);
-                RenderText(renderer, str, t->position, t->color, textMVP);
+                textCommands.push_back(t);
             } break;
         }
 
         ptr += header->size; // move to next command
     }
-}
 
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glViewport(0, 0, renderer->width, renderer->height);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glUseProgram(renderer->basePostProgram->program);
+    glBindTexture(GL_TEXTURE_2D, renderer->renderTexture); // Now this has your game in it!
+    glBindVertexArray(renderer->basePostProgram->vao);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    glm::mat4 textMVP = glm::ortho(0.0f, (float)renderer->width, 
+                                   (float)renderer->height, 0.0f, 
+                                   -1.0f, 1.0f);
+    for (auto* t : textCommands) {
+        const char* str = (char*)t + sizeof(RenderCommandDrawText);
+        RenderText(renderer, str, t->position, t->color, textMVP);
+    }
+}

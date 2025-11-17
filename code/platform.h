@@ -8,6 +8,9 @@
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
+static const int INTERNAL_WIDTH = 1280;
+static const int INTERNAL_HEIGHT = 720;
+
 static const char* vertexShaderText =
 "#version 330\n"
 "uniform mat4 MVP;\n"
@@ -56,6 +59,44 @@ static const char* textFragmentShader =
 "    fragment = vec4(color.rgb, color.a * alpha);\n"     // Multiply color by alpha
 "}\n";
 
+static const char* basePostShader =
+"#version 330 core\n"
+"layout (location = 0) in vec2 aPos;\n"
+"layout (location = 1) in vec2 aTexCoord;\n"
+"out vec2 TexCoord;\n"
+"void main()\n"
+"{\n"
+"    gl_Position = vec4(aPos, 0.0, 1.0);\n"
+"    TexCoord = aTexCoord;\n"
+"}\n";
+
+static const char* basePostFragment =
+"#version 330 core\n"
+"in vec2 TexCoord;\n"
+"out vec4 FragColor;\n"
+"uniform sampler2D screenTexture;\n"
+"void main()\n"
+"{\n"
+"    FragColor = texture(screenTexture, TexCoord);\n"
+"}\n";
+
+static const char* basePostFragmentCRT = 
+"#version 330 core\n"
+"in vec2 TexCoord;\n"
+"out vec4 FragColor;\n"
+"uniform sampler2D screenTexture;\n"
+"uniform float time;\n"
+"void main()\n"
+"{\n"
+"    vec4 color = texture(screenTexture, TexCoord);\n"
+"    float scanline = sin(TexCoord.y * 180.0 * 3.14159) * 0.1;\n"
+"    color.rgb -= scanline;\n"
+"    vec2 center = TexCoord - 0.5;\n"
+"    float vignette = 1.0 - dot(center, center) * 0.5;\n"
+"    color.rgb *= vignette;\n"
+"    FragColor = color;\n"
+"}\n";
+
 struct Program {
     GLuint vbo, vao, vertexShader, fragmentShader, program;
     GLint mvpLocation, vposLocation, vcolLocation, location;
@@ -64,6 +105,8 @@ struct Program {
 struct PlatformRenderer {
     Program* textProgram;
     Program* vertexProgram;
+    Program* basePostProgram;
+    GLuint renderTexture, frameBuffer;
     float ratio;
     int width, height;
     Font fontUI;

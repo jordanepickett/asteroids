@@ -204,6 +204,7 @@ static void PlayerInputUpdate(
                 input, 
                 rotLerp * frame->deltaTime
             ));
+            printf("rotx: %f\n", movementSystem->rot[i].x);
         }
 
         if(rightBurst) {

@@ -14,9 +14,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
 
-const int MAX_ASTEROIDS = 5;
 float asteroidSpawnTimer = 0.0f;
-float playerSpawnTimer = 0.0f;
 
 static int CountAsteroids(GameState* state) {
     int count = 0;
@@ -26,25 +24,6 @@ static int CountAsteroids(GameState* state) {
         }
     }
     return count;
-}
-
-static void TrySpawnPlayer(GameState* state) {
-    bool isAlive = false;
-    for (int i = 0; i < MAX_ENTITIES; i++) {
-        if (state->entities[i].isActive && 
-            state->entities[i].type == ENTITY_PLAYER)
-        {
-            isAlive = true;
-        } else if(!state->entities[i].isActive &&
-            state->entities[i].type == ENTITY_PLAYER){
-            isAlive = false;
-        }
-    }
-
-    if(!isAlive) {
-        CreateEntity(state, ENTITY_PLAYER);
-    }
-
 }
 
 static void TrySpawnAsteroid(GameState* state) {
@@ -66,10 +45,11 @@ static void TrySpawnAsteroid(GameState* state) {
             float velX = cosf(angle) * speed;
             float velY  = sinf(angle) * speed;
             glm::vec2 vel = { velX, velY };
-            AddMovement(state, a, pos, { 0, 1 }, vel);
+            glm::vec2 rot = glm::normalize(vel);
+            AddMovement(state, a, pos, rot, vel);
             AddTag(state, a, TAG_ASTEROID);
-            AddDamage(state, a, 1.0f, TAG_PLAYER|TAG_MISSLE);
-            AddRender(state, a, ASTEROID, 4);
+            AddDamage(state, a, 1.0f, TAG_MISSLE);
+            AddRender(state, a, ASTEROID, 8);
             AddFloatable(state, a);
             AddCollision(state, a, 1.0f);
 
@@ -144,7 +124,7 @@ inline void PushLoop2(
     drawCmd->mvp = mvp;
     drawCmd->vertexCount = vertexCount;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
-    memcpy(dst, verts, 4 * sizeof(Vertex));
+    memcpy(dst, verts, vertexCount * sizeof(Vertex));
 }
 
 inline void PushTrianges(
@@ -163,7 +143,6 @@ inline void PushTrianges(
     drawCmd->mvp = mvp;
     drawCmd->vertexCount = vertexCount;
     drawCmd->pos = entity->transform.position;
-    drawCmd->rotation = entity->transform.rotation;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
     memcpy(dst, verts, vertexCount * sizeof(Vertex));
 }
@@ -184,6 +163,7 @@ inline void PushLoop(
     drawCmd->pos = entity->transform.position;
     drawCmd->mvp = mvp;
     drawCmd->vertexCount = vertexCount;
+    drawCmd->rotation = entity->transform.rotation;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
     memcpy(dst, verts, 4 * sizeof(Vertex));
 }
@@ -343,12 +323,6 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
         asteroidSpawnTimer = 3.0f; // spawn every ~3 seconds
     }
 
-    playerSpawnTimer -= frame->deltaTime;
-    if (playerSpawnTimer <= 0.0f) {
-        //TrySpawnPlayer(state);
-        playerSpawnTimer = 5.0f;
-    }
-
     UpdateEntities(state, frame);
     //GameRender(state, memory, frame);
 }
@@ -411,6 +385,7 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
 
     // TODO: Text
     PushTextf(state, &memory->transient, {10, 50}, {1,1,1,1}, "FPS: %f", (1.0f * frame->deltaTime));
+    PushTextf(state, &memory->transient, {10, 300}, {1,1,1,1}, "HEALTH: %f", 100.0f);
 
 
     state->commands = memory->transient.base;
