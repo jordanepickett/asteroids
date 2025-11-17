@@ -26,6 +26,7 @@ typedef struct {
     glm::mat4 view[3];
     glm::vec3 pos[3];
     bool isLocked[3];
+    bool isActive[3];
     unsigned char present[3];
 } CameraSystem;
 

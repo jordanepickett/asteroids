@@ -3,6 +3,7 @@
 #include "game.h"
 #include "input.cpp"
 #include "platform.h"
+#include <glm/gtc/type_ptr.hpp>
 
 static void MovementSystemInit(MovementSystem *m) {
     for (int i = 0; i < MAX_ENTITIES; ++i) m->present[i] = -1;
@@ -70,6 +71,34 @@ static void AddTag(GameState* state, EntityID id, TagMask tag) {
 
 static void RemoveTag(GameState* state, EntityID id, TagMask tag) {
     state->entitiesReg->tag[id] &= ~tag;
+}
+
+static void AddCamera(
+    GameState *state,
+    EntityID id,
+    glm::mat4 lookAt,
+    glm::vec3 pos,
+    bool isLocked,
+    bool isActive
+) {
+    printf("Adding Camera to: %i\n", id);
+    assert(id >= 0 && id < MAX_ENTITIES);
+    CameraSystem *system = state->cameraSys;
+
+    float left   = -20.0f;
+    float right  =  20.0f;
+    float bottom = -20.0f;
+    float top    =  20.0f;
+    float nearZ  = -1.0f;
+    float farZ   =  1.0f;
+
+    system->projection[id] = glm::ortho(left, right, bottom, top, nearZ, farZ);
+    system->view[id] = lookAt;
+    system->pos[id] = pos;
+    system->isLocked[id] = isLocked;
+    system->isActive[id] = isActive;
+    system->present[id] = 1;
+    state->entitiesReg->comp[id] |= COMP_CAMERA;
 }
 
 static void AddCollision(GameState *state, EntityID id, float size) {
@@ -204,7 +233,6 @@ static void PlayerInputUpdate(
                 input, 
                 rotLerp * frame->deltaTime
             ));
-            printf("rotx: %f\n", movementSystem->rot[i].x);
         }
 
         if(rightBurst) {

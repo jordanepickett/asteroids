@@ -51,7 +51,7 @@ static void TrySpawnAsteroid(GameState* state) {
             AddDamage(state, a, 1.0f, TAG_MISSLE);
             AddRender(state, a, ASTEROID, 8);
             AddFloatable(state, a);
-            AddCollision(state, a, 1.0f);
+            AddCollision(state, a, 0.5f);
 
             //a->radius = 20.0f + (rand() % 15); // random asteroid size
         }
@@ -84,7 +84,7 @@ static void PushTextf(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::
 }
 
 inline void PushTrianges2(
-    GameState *state,
+    glm::mat4 mvp,
     MemoryArena *memory,
     Vertex *verts,
     int vertexCount,
@@ -92,7 +92,6 @@ inline void PushTrianges2(
     glm::vec2 rot
 ) {
 
-    glm::mat4 mvp = state->camera.projection * state->camera.view;
     size_t size = sizeof(RenderCommandDrawTriangles) + vertexCount * sizeof(Vertex); // assuming simple 2D verts
     auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
     drawCmd->header.type = RENDER_CMD_DRAW_TRIANGLES;
@@ -106,7 +105,7 @@ inline void PushTrianges2(
 }
 
 inline void PushLoop2(
-    GameState *state,
+    glm::mat4 mvp,
     MemoryArena *memory,
     Vertex *verts,
     int vertexCount,
@@ -114,7 +113,6 @@ inline void PushLoop2(
     glm::vec2 rot
 ) {
 
-    glm::mat4 mvp = state->camera.projection * state->camera.view;
     size_t size = sizeof(RenderCommandDrawTriangles) + vertexCount * sizeof(Vertex); // assuming simple 2D verts
     auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
     drawCmd->header.type = RENDER_CMD_DRAW_LOOP;
@@ -286,6 +284,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     //RenderQueueInit(g->render);
     //CollisionQueueInit(state->collisions);
 
+    //TODO move to scenes
     EntityID player = CreateEntity2(state);
     AddTag(state, player, TAG_PLAYER);
     glm::vec2 zero = { 0, 0};
@@ -296,23 +295,14 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     AddFireMissleSystem(state, player);
     AddCollision(state, player, 1.0f);
 
-    float left   = -20.0f;
-    float right  =  20.0f;
-    float bottom = -20.0f;
-    float top    =  20.0f;
-    float nearZ  = -1.0f;
-    float farZ   =  1.0f;
-
-    state->camera.projection = glm::ortho(left, right, bottom, top, nearZ, farZ);
-
-    // Place camera at z=1 looking at the origin
-    state->camera.position = glm::vec3(0.0f, 0.0f, 1.0f);
-    state->camera.view = glm::lookAt(
-        state->camera.position,             // eye
+    EntityID camera = CreateEntity2(state);
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::mat4 lookAt = glm::lookAt(
+        cameraPos,
         glm::vec3(0.0f, 0.0f, 0.0f),        // target
         glm::vec3(0.0f, 1.0f, 0.0f)         // up
     );
-    state->camera.isLocked = true;
+    AddCamera(state, camera, lookAt, cameraPos, true, true);
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -363,6 +353,16 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
 
     MovementSystem *movementSystem = state->movement;
     RenderSystem *renderSystem = state->render;
+    CameraSystem *cameraSystem = state->cameraSys;
+
+    glm::mat4 cameraMvp;
+    for(int i = 0; i < state->entitiesReg->count; i++) {
+        if((state->entitiesReg->comp[i] & (COMP_CAMERA))) {
+            if(cameraSystem->isActive[i]) {
+                cameraMvp = cameraSystem->projection[i] * cameraSystem->view[i];
+            }
+        }
+    }
 
     for(int i = 0; i < state->entitiesReg->count; i++) {
         if((state->entitiesReg->comp[i] & (COMP_RENDER | COMP_MOVEMENT))) {
@@ -373,18 +373,17 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
             rot = movementSystem->rot[i];
             Vertex *verts = renderSystem->verts[i];
             int count = renderSystem->vertCount[i];
-            //printf("movementIndex: %i, X: %f, Y: %f\n", movementIndex, pos.x, pos.y);
 
             if(count == 3) {
-                PushTrianges2(state, &memory->transient, verts, count, pos, rot);
+                PushTrianges2(cameraMvp, &memory->transient, verts, count, pos, rot);
             } else {
-                PushLoop2(state, &memory->transient, verts, count, pos, rot);
+                PushLoop2(cameraMvp, &memory->transient, verts, count, pos, rot);
             }
         }
     }
 
     // TODO: Text
-    PushTextf(state, &memory->transient, {10, 50}, {1,1,1,1}, "FPS: %f", (1.0f * frame->deltaTime));
+    PushTextf(state, &memory->transient, {10, 50}, {1,1,1,1}, "FPS: %f", (1.0f / frame->deltaTime));
     PushTextf(state, &memory->transient, {10, 300}, {1,1,1,1}, "HEALTH: %f", 100.0f);
 
 
