@@ -3,6 +3,14 @@
 #include <cstdint>
 #include <glm/glm.hpp>
 
+enum Anchor {
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT,
+    CENTER
+};
+
 enum RenderCommandType {
     RENDER_CMD_CLEAR,
     RENDER_CMD_DRAW_TRIANGLES,
@@ -34,4 +42,5 @@ struct RenderCommandDrawText {
     glm::vec2 position;
     glm::vec4 color;
     int length;
+    Anchor anchor;
 };

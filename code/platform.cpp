@@ -277,9 +277,36 @@ static void DrawQuadTextured(
     
     glBindBuffer(GL_ARRAY_BUFFER, renderer->textProgram->vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_DYNAMIC_DRAW);
-    glDrawArrays(GL_TRIANGLES, 0, 6);}
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+}
 
-static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 pos, glm::vec4 color, glm::mat4 mvp) {
+static glm::vec2 GetAnchoredPosition(Anchor anchor, glm::vec2 offset, glm::vec2 screenSize) {
+    glm::vec2 basePos = {};
+    switch (anchor) {
+        case Anchor::TOP_LEFT:
+            basePos = {0, 0};
+            break;
+        case Anchor::BOTTOM_LEFT:
+            basePos = {0, screenSize.y};
+            offset.y = -offset.y; // Flip Y offset for bottom anchors
+            break;
+        case Anchor::BOTTOM_RIGHT:
+            basePos = {screenSize.x, screenSize.y};
+            offset.x = -offset.x;
+            offset.y = -offset.y;
+            break;
+        case Anchor::TOP_RIGHT:
+            basePos = {screenSize.x, 0};
+            offset.x = -offset.x;
+            break;
+        case Anchor::CENTER:
+            basePos = {screenSize.x * 0.5f, screenSize.y * 0.5f};
+            break;
+    }
+    return basePos + offset;
+}
+
+static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 pos, glm::vec4 color, Anchor anchor, glm::mat4 mvp) {
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -292,8 +319,9 @@ static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 p
     glUniformMatrix4fv(renderer->textProgram->mvpLocation, 1, GL_FALSE, &mvp[0][0]);
     glUniform1i(renderer->textProgram->location, 0); // Use texture unit 0
 
-    float x = pos.x;
-    float y = pos.y;
+    glm::vec2 posOffset = GetAnchoredPosition(anchor, pos, { renderer->width, renderer->height });
+    float x = posOffset.x;
+    float y = posOffset.y;
     const float col[4] = {color.r, color.g, color.b, color.a};
 
     for (int i = 0; text[i]; i++) {
@@ -414,6 +442,6 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
                                    -1.0f, 1.0f);
     for (auto* t : textCommands) {
         const char* str = (char*)t + sizeof(RenderCommandDrawText);
-        RenderText(renderer, str, t->position, t->color, textMVP);
+        RenderText(renderer, str, t->position, t->color, t->anchor, textMVP);
     }
 }

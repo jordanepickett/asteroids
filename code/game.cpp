@@ -60,7 +60,7 @@ static void TrySpawnAsteroid(GameState* state) {
 
 }
 
-inline void PushText(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* str) {
+inline void PushText(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* str, Anchor anchor) {
     size_t len = strlen(str);
     size_t size = sizeof(RenderCommandDrawText) + len + 1;
     auto* cmd = (RenderCommandDrawText*)ArenaAlloc(arena, size);
@@ -69,18 +69,19 @@ inline void PushText(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::v
     cmd->position = pos;
     cmd->color = color;
     cmd->length = (int)len;
+    cmd->anchor = anchor;
     char* dst = (char*)cmd + sizeof(RenderCommandDrawText);
     memcpy(dst, str, len + 1);
 }
 
-static void PushTextf(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* fmt, ...) {
+static void PushTextf(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::vec4 color, Anchor anchor, const char* fmt, ...) {
     char buffer[512];
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
     
-    PushText(state, arena, pos, color, buffer);
+    PushText(state, arena, pos, color, buffer, anchor);
 }
 
 inline void PushTrianges2(
@@ -383,8 +384,8 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
     }
 
     // TODO: Text
-    PushTextf(state, &memory->transient, {10, 50}, {1,1,1,1}, "FPS: %f", (1.0f / frame->deltaTime));
-    PushTextf(state, &memory->transient, {10, 300}, {1,1,1,1}, "HEALTH: %f", 100.0f);
+    PushTextf(state, &memory->transient, {10, 20}, {1,1,1,1}, TOP_LEFT, "FPS: %f", (1.0f / frame->deltaTime));
+    PushTextf(state, &memory->transient, {10, 20}, {1,1,1,1}, BOTTOM_LEFT, "HEALTH: %f", 100.0f, BOTTOM_RIGHT);
 
 
     state->commands = memory->transient.base;
