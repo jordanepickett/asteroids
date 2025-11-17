@@ -62,14 +62,38 @@ void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
     renderer->textProgram = textProgram;
     TextShaderInit(renderer, textVertexShader, textFragmentShader);
 
-    // Load font
-    Font font;
-    bool isLoaded = LoadFont(&font, "pixel.ttf", 32.0f);
-    if(isLoaded) {
-        printf("Font loaded.\n");
-        renderer->font = font;
-    } else {
-        printf("Font not loaded.\n");
+    {
+        // Load font title font
+        Font font;
+        bool isLoaded = LoadFont(&font, "pixel.ttf", 32.0f);
+        if(isLoaded) {
+            printf("Font loaded.\n");
+            renderer->fontTitle = font;
+        } else {
+            printf("Font not loaded.\n");
+        }
+    }
+    {
+        // Load font title font
+        Font font;
+        bool isLoaded = LoadFont(&font, "pixel.ttf", 16.0f);
+        if(isLoaded) {
+            printf("Font loaded.\n");
+            renderer->fontUI = font;
+        } else {
+            printf("Font not loaded.\n");
+        }
+    }
+    {
+        // Load font title font
+        Font font;
+        bool isLoaded = LoadFont(&font, "pixel.ttf", 12.0f);
+        if(isLoaded) {
+            printf("Font loaded.\n");
+            renderer->fontDebug = font;
+        } else {
+            printf("Font not loaded.\n");
+        }
     }
 }
 
@@ -82,7 +106,7 @@ void PlatformRunGameLoop(PlatformAPI *api,
         return;
     }
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Asteroids", 0, 0);
+    GLFWwindow* window = glfwCreateWindow(640, 360, "Asteroids", 0, 0);
 
     if (!window)
     {
@@ -254,9 +278,10 @@ static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 p
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
+    Font* usedFont = &renderer->fontDebug;
     glUseProgram(renderer->textProgram->program);
     glBindVertexArray(renderer->textProgram->vao);
-    glBindTexture(GL_TEXTURE_2D, renderer->font.texture_id);
+    glBindTexture(GL_TEXTURE_2D, usedFont->texture_id);
     
     glUniformMatrix4fv(renderer->textProgram->mvpLocation, 1, GL_FALSE, &mvp[0][0]);
     glUniform1i(renderer->textProgram->location, 0); // Use texture unit 0
@@ -269,17 +294,17 @@ static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 p
         char c = text[i];
         if (c < 32 || c > 126) continue;
         
-        const stbtt_bakedchar& g = renderer->font.glyphs[c - 32];
+        const stbtt_bakedchar& g = usedFont->glyphs[c - 32];
         
         float x0 = x + g.xoff;
         float y0 = y + g.yoff;
         float x1 = x0 + (g.x1 - g.x0);
         float y1 = y0 + (g.y1 - g.y0);
 
-        float s0 = g.x0 / (float)renderer->font.atlas_w;
-        float t0 = g.y0 / (float)renderer->font.atlas_h;
-        float s1 = g.x1 / (float)renderer->font.atlas_w;
-        float t1 = g.y1 / (float)renderer->font.atlas_h;
+        float s0 = g.x0 / (float)usedFont->atlas_w;
+        float t0 = g.y0 / (float)usedFont->atlas_h;
+        float s1 = g.x1 / (float)usedFont->atlas_w;
+        float t1 = g.y1 / (float)usedFont->atlas_h;
 
         DrawQuadTextured(renderer, x0, y0, x1, y1, s0, t0, s1, t1, col);
 

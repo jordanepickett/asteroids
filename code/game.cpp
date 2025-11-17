@@ -56,8 +56,8 @@ static void TrySpawnAsteroid(GameState* state) {
         EntityID a = CreateEntity2(state);
         if (a) {
             // random position at edges of screen
-            float x = (rand() % 2 == 0) ? 0.0f : 800;
-            float y = (float)(rand() % 600);
+            float x = (rand() % 2 == 0) ? 0.0f : 640;
+            float y = (float)(rand() % 480);
             glm::vec2 pos = { x, y };
 
             // random velocity (pick a random direction + speed)

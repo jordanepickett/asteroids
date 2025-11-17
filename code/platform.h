@@ -66,7 +66,9 @@ struct PlatformRenderer {
     Program* vertexProgram;
     float ratio;
     int width, height;
-    Font font;
+    Font fontUI;
+    Font fontTitle;
+    Font fontDebug;
 };
 
 struct PlatformMemory {
