@@ -26,7 +26,7 @@ struct Vertex {
 
 struct TextVertex {
     glm::vec2 position;
-    float u, v;
+    glm::vec2 uv;
     glm::vec4 color;
 };
 

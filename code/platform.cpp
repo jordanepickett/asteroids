@@ -53,20 +53,115 @@ void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
         return;
     }
 
+    float quadVertices[] = {
+        // positions   // texCoords
+        -1.0f,  1.0f,  0.0f, 1.0f,
+        -1.0f, -1.0f,  0.0f, 0.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+        -1.0f,  1.0f,  0.0f, 1.0f,
+         1.0f, -1.0f,  1.0f, 0.0f,
+         1.0f,  1.0f,  1.0f, 1.0f
+    };
+
+    // Vertex VAO/VBO
+    glGenVertexArrays(1, &renderer->vertexVAO);
+    glBindVertexArray(renderer->vertexVAO);
+
+    glGenBuffers(1, &renderer->vertexVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexVBO);
+
+    // Set attribute layout for this VAO
+    glEnableVertexAttribArray(0); // position
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (void*)offsetof(Vertex, position));
+
+    glEnableVertexAttribArray(1); // color
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (void*)offsetof(Vertex, color));
+
+    glBindVertexArray(0);
+
+    // Text VAO/VBO
+    glGenVertexArrays(1, &renderer->textVAO);
+    glBindVertexArray(renderer->textVAO);
+
+    glGenBuffers(1, &renderer->textVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->textVBO);
+
+    // position
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(TextVertex),
+                          (void*)offsetof(TextVertex, position));
+
+    // uv
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(TextVertex),
+                          (void*)offsetof(TextVertex, uv));
+
+    // color
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(TextVertex),
+                          (void*)offsetof(TextVertex, color));
+
+    glBindVertexArray(0);
+
+    glGenVertexArrays(1, &renderer->screenVAO);
+    glBindVertexArray(renderer->screenVAO);
+
+    glGenBuffers(1, &renderer->screenVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->screenVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), quadVertices, GL_STATIC_DRAW);
+    
+    // Position attribute
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
+    
+    // TexCoord attribute
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)(2 * sizeof(float)));
+    
+    glBindVertexArray(0);
+
     //Vertex Shader
     Program* vertexProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
     renderer->vertexProgram = vertexProgram;
-    VertexShaderInit(renderer, vertexShaderText, fragmentShaderText);
+    VertexShaderInit(renderer, renderer->vertexProgram, vertexShaderText, fragmentShaderText);
 
     //Texture Shader
     Program* textProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
     renderer->textProgram = textProgram;
-    TextShaderInit(renderer, textVertexShader, textFragmentShader);
+    TextShaderInit(renderer, renderer->textProgram, textVertexShader, textFragmentShader);
+
+    glGenFramebuffers(1, &renderer->frameBuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, renderer->frameBuffer);
+
+    // Generate and configure the render texture
+    glGenTextures(1, &renderer->postProcessingTexture);
+    glBindTexture(GL_TEXTURE_2D, renderer->postProcessingTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, INTERNAL_WIDTH, INTERNAL_HEIGHT, 
+                 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // Crisp pixels
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // Attach texture to framebuffer
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, 
+                           GL_TEXTURE_2D, renderer->postProcessingTexture, 0);
+
+    glGenTextures(1, &renderer->bloomTexture);
+    glBindTexture(GL_TEXTURE_2D, renderer->bloomTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, INTERNAL_WIDTH, INTERNAL_HEIGHT, 
+                 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); // Crisp pixels
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
+    // Attach texture to framebuffer
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, 
+                           GL_TEXTURE_2D, renderer->bloomTexture, 0);
 
     //Base Post Shader
     Program* basePostProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
     renderer->basePostProgram = basePostProgram;
-    BasePostShaderInit(renderer, basePostShader, basePostFragment);
+    BasePostShaderInit(renderer, renderer->basePostProgram, basePostShader, basePostFragment);
 
     {
         // Load font title font
@@ -266,16 +361,16 @@ static void DrawQuadTextured(
 )
 {
     TextVertex verts[6] = {
-        {{ x0, y0 }, s0, t0, { color[0], color[1], color[2], color[3] }},
-        {{x1, y0 }, s1, t0, { color[0], color[1], color[2], color[3] }},
-        {{x1, y1 }, s1, t1, { color[0], color[1], color[2], color[3] }},
+        {{ x0, y0 }, {s0, t0}, { color[0], color[1], color[2], color[3] }},
+        {{x1, y0 }, {s1, t0}, { color[0], color[1], color[2], color[3] }},
+        {{x1, y1 }, {s1, t1}, { color[0], color[1], color[2], color[3] }},
         
-        {{ x0, y0 }, s0, t0, { color[0], color[1], color[2], color[3] }},
-        {{ x1, y1 }, s1, t1, { color[0], color[1], color[2], color[3] }},
-        {{ x0, y1 }, s0, t1, { color[0], color[1], color[2], color[3] }}
+        {{ x0, y0 }, {s0, t0}, { color[0], color[1], color[2], color[3] }},
+        {{ x1, y1 }, {s1, t1}, { color[0], color[1], color[2], color[3] }},
+        {{ x0, y1 }, {s0, t1}, { color[0], color[1], color[2], color[3] }}
     };
     
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->textProgram->vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->textVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_DYNAMIC_DRAW);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
@@ -313,10 +408,10 @@ static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 p
     
     Font* usedFont = &renderer->fontUI;
     glUseProgram(renderer->textProgram->program);
-    glBindVertexArray(renderer->textProgram->vao);
+    glBindVertexArray(renderer->textVAO);
     glBindTexture(GL_TEXTURE_2D, usedFont->texture_id);
     
-    glUniformMatrix4fv(renderer->textProgram->mvpLocation, 1, GL_FALSE, &mvp[0][0]);
+    glUniformMatrix4fv(glGetUniformLocation(renderer->textProgram->program, "MVP"), 1, GL_FALSE, &mvp[0][0]);
     glUniform1i(renderer->textProgram->location, 0); // Use texture unit 0
 
     glm::vec2 posOffset = GetAnchoredPosition(anchor, pos, { renderer->width, renderer->height });
@@ -385,12 +480,12 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
                 glm::mat4 mvp = d->mvp * model;
 
                 glUseProgram(renderer->vertexProgram->program);
-                glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexProgram->vbo);
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexVBO);
 
                 glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
-                glUniformMatrix4fv(renderer->vertexProgram->mvpLocation, 1, GL_FALSE, (const GLfloat*)&mvp);
+                glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "MVP"), 1, GL_FALSE, (const GLfloat*)&mvp);
 
-                glBindVertexArray(renderer->vertexProgram->vao);
+                glBindVertexArray(renderer->vertexVAO);
                 glDrawArrays(GL_TRIANGLES, 0, d->vertexCount);
 
                 glBindVertexArray(0);
@@ -411,12 +506,12 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
                 glm::mat4 mvp = d->mvp * model;
 
                 glUseProgram(renderer->vertexProgram->program);
-                glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexProgram->vbo);
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexVBO);
 
                 glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
-                glUniformMatrix4fv(renderer->vertexProgram->mvpLocation, 1, GL_FALSE, (const GLfloat*)&mvp);
+                glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "MVP"), 1, GL_FALSE, (const GLfloat*)&mvp);
 
-                glBindVertexArray(renderer->vertexProgram->vao);
+                glBindVertexArray(renderer->vertexVAO);
                 glDrawArrays(GL_LINE_LOOP, 0, d->vertexCount);
 
                 glBindVertexArray(0);
@@ -429,17 +524,18 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
 
         ptr += header->size; // move to next command
     }
-
     glDisable(GL_BLEND);
+
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, renderer->width, renderer->height);
     glClear(GL_COLOR_BUFFER_BIT);
     glUseProgram(renderer->basePostProgram->program);
-    glBindTexture(GL_TEXTURE_2D, renderer->renderTexture); // Now this has your game in it!
-    glBindVertexArray(renderer->basePostProgram->vao);
+    glBindTexture(GL_TEXTURE_2D, renderer->postProcessingTexture); // Now this has your game in it!
+    glBindVertexArray(renderer->screenVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
+    // Render text to screen size
     glm::mat4 textMVP = glm::ortho(0.0f, (float)renderer->width, 
                                    (float)renderer->height, 0.0f, 
                                    -1.0f, 1.0f);

@@ -14,8 +14,8 @@ static const int INTERNAL_HEIGHT = 720;
 static const char* vertexShaderText =
 "#version 330\n"
 "uniform mat4 MVP;\n"
-"in vec4 vCol;\n"
-"in vec2 vPos;\n"
+"layout (location = 0) in vec2 vPos;\n"
+"layout (location = 1) in vec4 vCol;\n"
 "out vec4 color;\n"
 "void main()\n"
 "{\n"
@@ -35,9 +35,9 @@ static const char* fragmentShaderText =
 static const char* textVertexShader =
 "#version 330\n"
 "uniform mat4 MVP;\n"
-"in vec2 vPos;\n"
-"in vec2 vTexCoord;\n"
-"in vec4 vCol;\n"
+"layout (location = 0) in vec2 vPos;\n"
+"layout (location = 1) in vec2 vTexCoord;\n"
+"layout (location = 2) in vec4 vCol;\n"
 "out vec2 texCoord;\n"
 "out vec4 color;\n"
 "void main()\n"
@@ -103,10 +103,11 @@ struct Program {
 };
 
 struct PlatformRenderer {
+    GLuint vertexVAO,vertexVBO, textVAO, textVBO, screenVAO, screenVBO;
     Program* textProgram;
     Program* vertexProgram;
     Program* basePostProgram;
-    GLuint renderTexture, frameBuffer;
+    GLuint renderTexture, frameBuffer, postProcessingTexture, bloomTexture;
     float ratio;
     int width, height;
     Font fontUI;
