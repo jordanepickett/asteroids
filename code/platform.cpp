@@ -1,6 +1,7 @@
 #include "text_shader.cpp"
 #include "vertex_shader.cpp"
 #include "base_post_shader.cpp"
+#include "blur_shader.cpp"
 #include "entity.h"
 #include "font.h"
 #include "game.h"
@@ -132,6 +133,25 @@ void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
     renderer->textProgram = textProgram;
     TextShaderInit(renderer, renderer->textProgram, textVertexShader, textFragmentShader);
 
+    // Base Post Shader
+    Program* basePostProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
+    renderer->basePostProgram = basePostProgram;
+    BasePostShaderInit(renderer, renderer->basePostProgram, basePostShader, basePostFragment);
+
+    // Blur Shader
+    Program* blurProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
+    renderer->blurProgram = blurProgram;
+    BlurShaderInit(renderer, renderer->blurProgram, basePostShader, blurFragment);
+
+    glUseProgram(renderer->basePostProgram->program);
+    float gamma = 2.2f;
+    glUniform1i(glGetUniformLocation(basePostProgram->program, "screenTexture"), 0);
+    glUniform1i(glGetUniformLocation(basePostProgram->program, "bloomTexture"), 1);
+    glUniform1f(glGetUniformLocation(basePostProgram->program, "gamma"), gamma);
+
+    glUseProgram(renderer->blurProgram->program);
+    glUniform1i(glGetUniformLocation(renderer->blurProgram->program, "screenTexture"), 0);
+
     glGenFramebuffers(1, &renderer->frameBuffer);
     glBindFramebuffer(GL_FRAMEBUFFER, renderer->frameBuffer);
 
@@ -158,10 +178,23 @@ void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, 
                            GL_TEXTURE_2D, renderer->bloomTexture, 0);
 
-    //Base Post Shader
-    Program* basePostProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
-    renderer->basePostProgram = basePostProgram;
-    BasePostShaderInit(renderer, renderer->basePostProgram, basePostShader, basePostFragment);
+    GLuint attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
+    glDrawBuffers(2, attachments);
+
+
+	glGenFramebuffers(2, renderer->pingPongBuffer);
+	glGenTextures(2, renderer->pingPongTexture);
+	for (unsigned int i = 0; i < 2; i++)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, renderer->pingPongBuffer[i]);
+		glBindTexture(GL_TEXTURE_2D, renderer->pingPongTexture[i]);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, INTERNAL_WIDTH, INTERNAL_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderer->pingPongTexture[i], 0);
+	}
 
     {
         // Load font title font
@@ -224,8 +257,8 @@ void PlatformRunGameLoop(PlatformAPI *api,
     glfwSwapInterval(1);
 
 
-    const size_t PERM_SIZE = 64 * 1024 * 1024;
-    const size_t TRANS_SIZE = 64 * 1024 * 1024;
+    const size_t PERM_SIZE = 64 * 1024;
+    const size_t TRANS_SIZE = 64 * 1024;
     
     void* permMem = malloc(PERM_SIZE);
     void* transMem = malloc(TRANS_SIZE);
@@ -412,7 +445,6 @@ static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 p
     glBindTexture(GL_TEXTURE_2D, usedFont->texture_id);
     
     glUniformMatrix4fv(glGetUniformLocation(renderer->textProgram->program, "MVP"), 1, GL_FALSE, &mvp[0][0]);
-    glUniform1i(renderer->textProgram->location, 0); // Use texture unit 0
 
     glm::vec2 posOffset = GetAnchoredPosition(anchor, pos, { renderer->width, renderer->height });
     float x = posOffset.x;
@@ -526,13 +558,47 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
     }
     glDisable(GL_BLEND);
 
+    // Bounce the image data around to blur multiple times
+    bool horizontal = true, first_iteration = true;
+    // Amount of time to bounce the blur
+    int amount = 2;
+    glUseProgram(renderer->blurProgram->program);
+    for (unsigned int i = 0; i < amount; i++)
+    {
+        glBindFramebuffer(GL_FRAMEBUFFER, renderer->pingPongBuffer[horizontal]);
+        glUniform1i(glGetUniformLocation(renderer->blurProgram->program, "horizontal"), horizontal);
+
+        // In the first bounc we want to get the data from the bloomTexture
+        if (first_iteration)
+        {
+            glBindTexture(GL_TEXTURE_2D, renderer->bloomTexture);
+            first_iteration = false;
+        }
+        // Move the data between the pingPong textures
+        else {
+            glBindTexture(GL_TEXTURE_2D, renderer->pingPongTexture[!horizontal]);
+        }
+
+        // Render the image
+        glBindVertexArray(renderer->screenVAO);
+        glDisable(GL_DEPTH_TEST);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        // Switch between vertical and horizontal blurring
+        horizontal = !horizontal;
+    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, renderer->width, renderer->height);
     glClear(GL_COLOR_BUFFER_BIT);
+    
     glUseProgram(renderer->basePostProgram->program);
-    glBindTexture(GL_TEXTURE_2D, renderer->postProcessingTexture); // Now this has your game in it!
     glBindVertexArray(renderer->screenVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, renderer->postProcessingTexture);
+
+    //glActiveTexture(GL_TEXTURE1);
+    //glBindTexture(GL_TEXTURE_2D, renderer->pingPongTexture[!horizontal]);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     // Render text to screen size
