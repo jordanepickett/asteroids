@@ -1,6 +1,7 @@
 #pragma once
 #include "defs.h"
 #include "components.h"
+#include "render_commands.h"
 #include "tags.h"
 #include "entity.h"
 #include <glm/glm.hpp>
@@ -16,6 +17,15 @@ typedef struct {
     float lifetime[20];
     unsigned char present[MAX_ENTITIES];
 } FireMissleSystem;
+
+typedef struct {
+    glm::vec2 pos[20];
+    glm::vec4 color[20];
+    Anchor anchor[20];
+    EntityID source[20];
+    FieldType fieldType[20];
+    unsigned char present[20];
+} TextSystem;
 
 typedef struct {
     unsigned char present[MAX_ENTITIES];
@@ -50,7 +60,8 @@ typedef struct {
 } ModelSystem;
 
 typedef struct {
-    float hp[MAX_ENTITIES];
+    float currentHP[MAX_ENTITIES];
+    float maxHP[MAX_ENTITIES];
     unsigned char present[MAX_ENTITIES];
 } HealthSystem;
 

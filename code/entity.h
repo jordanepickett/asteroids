@@ -21,7 +21,7 @@ struct Transform {
 
 struct Vertex {
     glm::vec2 position;
-    glm::vec3 color;
+    glm::vec4 color;
 };
 
 struct TextVertex {

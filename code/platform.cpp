@@ -359,6 +359,7 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
 
     glBindFramebuffer(GL_FRAMEBUFFER, renderer->frameBuffer);
     glViewport(0, 0, INTERNAL_WIDTH, INTERNAL_HEIGHT);
+    glEnable(GL_BLEND);
 
     while (ptr < end) {
         RenderCommandHeader* header = (RenderCommandHeader*)ptr;
@@ -428,6 +429,8 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
 
         ptr += header->size; // move to next command
     }
+
+    glDisable(GL_BLEND);
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, renderer->width, renderer->height);

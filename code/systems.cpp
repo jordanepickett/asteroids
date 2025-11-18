@@ -101,6 +101,27 @@ static void AddCamera(
     state->entitiesReg->comp[id] |= COMP_CAMERA;
 }
 
+static void AddText(
+    GameState *state,
+    EntityID id,
+    glm::vec2 pos,
+    glm::vec4 color,
+    Anchor anchor,
+    EntityID source,
+    FieldType fieldType
+) {
+    printf("Adding Text to: %i\n", id);
+    assert(id >= 0 && id < MAX_ENTITIES);
+    TextSystem *system = state->textSystem;
+    system->pos[id] = pos;
+    system->color[id] = color;
+    system->anchor[id] = anchor;
+    system->source[id] = source;
+    system->fieldType[id] = fieldType;
+    system->present[id] = 1;
+    state->entitiesReg->comp[id] |= COMP_TEXT;
+}
+
 static void AddCollision(GameState *state, EntityID id, float size) {
     printf("Adding Collision to: %i\n", id);
     assert(id >= 0 && id < MAX_ENTITIES);
@@ -118,6 +139,16 @@ static void AddRender(GameState *state, EntityID id, Vertex *verts, int vertCoun
     system->vertCount[id] = vertCount;
     system->present[id] = 1;
     state->entitiesReg->comp[id] |= COMP_RENDER;
+}
+
+static void AddHealth(GameState *state, EntityID id, float hp) {
+    printf("Adding Health to: %i\n", id);
+    assert(id >= 0 && id < MAX_ENTITIES);
+    HealthSystem *system = state->health;
+    system->currentHP[id] = hp;
+    system->maxHP[id] = hp;
+    system->present[id] = 1;
+    state->entitiesReg->comp[id] |= COMP_HEALTH;
 }
 
 static void AddDamage(GameState *state, EntityID id, float amount, TagMask canHit) {

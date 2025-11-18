@@ -7,3 +7,8 @@ typedef int32_t EntityID;
 #define MAX_ENTITIES 32
 #define MAX_FLOATABLES 15
 #define MAX_LIFETIMES 15
+
+enum FieldType {
+    FIELD_HEALTH,
+    FIELD_SPEED,
+};

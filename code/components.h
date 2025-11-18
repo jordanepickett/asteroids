@@ -13,5 +13,6 @@ enum {
     COMP_FIRE_MISSLE = 1 << 7,
     COMP_LIFETIME = 1 << 8,
     COMP_FLOATABLE = 1 << 9,
+    COMP_TEXT = 1 << 10,
 };
 

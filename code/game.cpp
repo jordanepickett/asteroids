@@ -243,6 +243,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     // Systems
     state->entitiesReg = (EntityRegistry*)ArenaAlloc(&memory->permanent, sizeof(EntityRegistry));
     state->render = (RenderSystem*)ArenaAlloc(&memory->permanent, sizeof(RenderSystem));
+    state->textSystem = (TextSystem*)ArenaAlloc(&memory->permanent, sizeof(TextSystem));
     state->movement = (MovementSystem*)ArenaAlloc(&memory->permanent, sizeof(MovementSystem));
     state->health = (HealthSystem*)ArenaAlloc(&memory->permanent, sizeof(HealthSystem));
     state->damage = (DamageSystem*)ArenaAlloc(&memory->permanent, sizeof(DamageSystem));
@@ -261,6 +262,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     // Systems 0
     memset(state->entitiesReg, 0, sizeof(EntityRegistry));
     memset(state->render, 0, sizeof(RenderSystem));
+    memset(state->textSystem, 0, sizeof(TextSystem));
     memset(state->movement, 0, sizeof(MovementSystem));
     memset(state->health, 0, sizeof(HealthSystem));
     memset(state->damage, 0, sizeof(DamageSystem));
@@ -291,6 +293,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     glm::vec2 zero = { 0, 0};
     glm::vec2 rot = { 0, 1};
     AddMovement(state, player, zero, rot, zero);
+    AddHealth(state, player, 3.0f);
     AddRender(state, player, SHIP, 3);
     AddPlayerInput(state, player);
     AddFireMissleSystem(state, player);
@@ -304,6 +307,17 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
         glm::vec3(0.0f, 1.0f, 0.0f)         // up
     );
     AddCamera(state, camera, lookAt, cameraPos, true, true);
+
+    EntityID healthText = CreateEntity2(state);
+    AddText(
+        state,
+        healthText,
+        {10, 20},
+        {1,0,1,1},
+        BOTTOM_LEFT,
+        player,
+        FIELD_HEALTH
+    );
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -355,6 +369,8 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
     MovementSystem *movementSystem = state->movement;
     RenderSystem *renderSystem = state->render;
     CameraSystem *cameraSystem = state->cameraSys;
+    TextSystem *textSystem = state->textSystem;
+    HealthSystem *healthSystem = state->health;
 
     glm::mat4 cameraMvp;
     for(int i = 0; i < state->entitiesReg->count; i++) {
@@ -372,8 +388,14 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
             glm::vec2 rot = {0,1};
             pos = movementSystem->pos[i];
             rot = movementSystem->rot[i];
-            Vertex *verts = renderSystem->verts[i];
             int count = renderSystem->vertCount[i];
+            Vertex *verts = renderSystem->verts[i];
+            //if(i == 5) {
+            //    for(int j = 0; j < renderSystem->vertCount[i]; j++) {
+            //        Vertex *vert = &verts[j];
+            //        vert->color = {1,1,1,0.8};
+            //    }
+            //}
 
             if(count == 3) {
                 PushTrianges2(cameraMvp, &memory->transient, verts, count, pos, rot);
@@ -381,11 +403,49 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
                 PushLoop2(cameraMvp, &memory->transient, verts, count, pos, rot);
             }
         }
+
+        if((state->entitiesReg->comp[i] & (COMP_TEXT))) {
+            glm::vec2 pos = textSystem->pos[i];
+            glm::vec4 color = textSystem->color[i];
+            Anchor anchor = textSystem->anchor[i];
+            FieldType field = textSystem->fieldType[i];
+            EntityID source = textSystem->source[i];
+            switch (field) {
+                case FIELD_HEALTH:
+                    if(state->entitiesReg->comp[source] & COMP_HEALTH) {
+                        float hp = healthSystem->currentHP[source];
+                        PushTextf(
+                            state,
+                            &memory->transient,
+                            pos,
+                            color,
+                            anchor,
+                            "HEALTH: %i",
+                            (int)hp, 
+                            BOTTOM_RIGHT
+                        );
+                    }
+                    break;
+                case FIELD_SPEED:
+                    if(state->entitiesReg->comp[i] & COMP_HEALTH) {
+                        PushTextf(
+                            state,
+                            &memory->transient,
+                            pos,
+                            color,
+                            anchor,
+                            "HEALTH: %f",
+                            100.0f, 
+                            BOTTOM_RIGHT
+                        );
+                    }
+                    break;
+            }
+        }
     }
 
     // TODO: Text
     PushTextf(state, &memory->transient, {10, 20}, {1,1,1,1}, TOP_LEFT, "FPS: %f", (1.0f / frame->deltaTime));
-    PushTextf(state, &memory->transient, {10, 20}, {1,1,1,1}, BOTTOM_LEFT, "HEALTH: %f", 100.0f, BOTTOM_RIGHT);
 
 
     state->commands = memory->transient.base;

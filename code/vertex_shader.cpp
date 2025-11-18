@@ -40,7 +40,7 @@ static void VertexShaderInit(PlatformRenderer* renderer, const char* textVertexS
     glEnableVertexAttribArray(renderer->vertexProgram->vcolLocation);
     glVertexAttribPointer(
         renderer->vertexProgram->vcolLocation,
-        3, GL_FLOAT, GL_FALSE,
+        4, GL_FLOAT, GL_FALSE,
         sizeof(Vertex),
         (void*)offsetof(Vertex, color)
     );

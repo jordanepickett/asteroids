@@ -14,9 +14,9 @@ static const int INTERNAL_HEIGHT = 720;
 static const char* vertexShaderText =
 "#version 330\n"
 "uniform mat4 MVP;\n"
-"in vec3 vCol;\n"
+"in vec4 vCol;\n"
 "in vec2 vPos;\n"
-"out vec3 color;\n"
+"out vec4 color;\n"
 "void main()\n"
 "{\n"
 "    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
@@ -25,11 +25,11 @@ static const char* vertexShaderText =
  
 static const char* fragmentShaderText =
 "#version 330\n"
-"in vec3 color;\n"
+"in vec4 color;\n"
 "out vec4 fragment;\n"
 "void main()\n"
 "{\n"
-"    fragment = vec4(color, 1.0);\n"
+"    fragment = vec4(color.rgb, color.a);\n"
 "}\n";
 
 static const char* textVertexShader =
