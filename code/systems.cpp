@@ -122,6 +122,26 @@ static void AddText(
     state->entitiesReg->comp[id] |= COMP_TEXT;
 }
 
+static void AddLight(GameState *state,
+                     EntityID id,
+                     glm::vec2 pos,
+                     glm::vec3 color,
+                     float radius,
+                     float intesity,
+                     EntityID source = -1
+                     ) {
+    printf("Adding Light to: %i\n", id);
+    assert(id >= 0 && id < MAX_ENTITIES);
+    LightSystem *system = state->light;
+    system->pos[id] = pos;
+    system->color[id] = color;
+    system->radius[id] = radius;
+    system->intesity[id] = intesity;
+    system->source[id] = source;
+    system->present[id] = 1;
+    state->entitiesReg->comp[id] |= COMP_LIGHT;
+}
+
 static void AddCollision(GameState *state, EntityID id, float size) {
     printf("Adding Collision to: %i\n", id);
     assert(id >= 0 && id < MAX_ENTITIES);

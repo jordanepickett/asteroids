@@ -1,3 +1,4 @@
+#include "systems.h"
 #include "text_shader.cpp"
 #include "vertex_shader.cpp"
 #include "base_post_shader.cpp"
@@ -79,6 +80,10 @@ void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
     glEnableVertexAttribArray(1); // color
     glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                           (void*)offsetof(Vertex, color));
+
+    glEnableVertexAttribArray(2); // normal
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex),
+                          (void*)offsetof(Vertex, normal));
 
     glBindVertexArray(0);
 
@@ -177,7 +182,7 @@ void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
     // Attach texture to framebuffer
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, 
                            GL_TEXTURE_2D, renderer->bloomTexture, 0);
-
+     
     GLuint attachments[2] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
     glDrawBuffers(2, attachments);
 
@@ -371,7 +376,7 @@ void PlatformRunGameLoop(PlatformAPI *api,
         GameUpdate(game, &frame, &memory);
         GameRender(game, &memory, &frame);
 
-        PlatformRender(renderer, game->commands, game->renderCommandsCount);
+        PlatformRender(renderer, game->commands, game->renderCommandsCount, game->light);
 
         GameInput *temp = newInput;
         newInput = oldInput;
@@ -476,7 +481,7 @@ static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 p
     glDisable(GL_BLEND);
 }
 
-void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
+void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, LightSystem* system) {
 
     uint8_t* ptr = (uint8_t*)buffer;
     uint8_t* end = ptr + size;
@@ -512,12 +517,43 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
                 glm::mat4 mvp = d->mvp * model;
 
                 glUseProgram(renderer->vertexProgram->program);
+                glBindVertexArray(renderer->vertexVAO);
                 glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexVBO);
 
-                glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
                 glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "MVP"), 1, GL_FALSE, (const GLfloat*)&mvp);
+                glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "Model"), 
+                                   1, GL_FALSE, (const GLfloat*)&model);
 
-                glBindVertexArray(renderer->vertexVAO);
+                glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
+
+                int lightCount = ArrayCount(system->pos);
+                glUniform1i(glGetUniformLocation(renderer->vertexProgram->program, "numLights"), 1);
+                glUniform3f(glGetUniformLocation(renderer->vertexProgram->program, "ambientColor"), 0.3f, 0.8f, 0.9f);
+
+                for (int i = 0; i < lightCount && i < 16; i++) {
+                    char uniformName[64];
+                    if(!system->present[i]) {
+                        continue;
+                    }
+
+                    snprintf(uniformName, sizeof(uniformName), "lights[%d].position", i);
+                    GLint posLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].position");
+                    glUniform2f(posLoc, system->pos[i].x, system->pos[i].y);
+                    //printf("lights[%d].position location: %d\n", 0, posLoc);
+
+                    snprintf(uniformName, sizeof(uniformName), "lights[%d].color", i);
+                    GLint colorLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].color");
+                    glUniform3f(colorLoc, system->color[i].r, system->color[i].g, system->color[i].b);
+
+                    snprintf(uniformName, sizeof(uniformName), "lights[%d].radius", i);
+                    GLint radiusLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].radius");
+                    glUniform1f(radiusLoc, system->radius[i]);
+
+                    snprintf(uniformName, sizeof(uniformName), "lights[%d].intensity", i);
+                    GLint intensityLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].intesity");
+                    glUniform1f(intensityLoc, system->intesity[i]);
+                }
+
                 glDrawArrays(GL_TRIANGLES, 0, d->vertexCount);
 
                 glBindVertexArray(0);
@@ -540,8 +576,38 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
                 glUseProgram(renderer->vertexProgram->program);
                 glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexVBO);
 
-                glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
                 glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "MVP"), 1, GL_FALSE, (const GLfloat*)&mvp);
+                glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "Model"), 
+                                   1, GL_FALSE, (const GLfloat*)&model);
+
+                glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
+
+                int lightCount = ArrayCount(system->pos);
+                glUniform1i(glGetUniformLocation(renderer->vertexProgram->program, "numLights"), 1);
+                glUniform3f(glGetUniformLocation(renderer->vertexProgram->program, "ambientLight"), 0.1f, 0.1f, 0.15f);
+
+                for (int i = 0; i < 1 && i < 16; i++) {
+                    char uniformName[64];
+                    if(!system->present[i]) {
+                        continue;
+                    }
+
+                    snprintf(uniformName, sizeof(uniformName), "lights[%d].position", i);
+                    GLint posLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].position");
+                    glUniform2f(posLoc, system->pos[i].x, system->pos[i].y);
+
+                    snprintf(uniformName, sizeof(uniformName), "lights[%d].color", i);
+                    GLint colorLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].color");
+                    glUniform3f(colorLoc, system->color[i].r, system->color[i].g, system->color[i].b);
+
+                    snprintf(uniformName, sizeof(uniformName), "lights[%d].radius", i);
+                    GLint radiusLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].radius");
+                    glUniform1f(radiusLoc, system->radius[i]);
+
+                    snprintf(uniformName, sizeof(uniformName), "lights[%d].intensity", i);
+                    GLint intensityLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].intesity");
+                    glUniform1f(intensityLoc, system->intesity[i]);
+                }
 
                 glBindVertexArray(renderer->vertexVAO);
                 glDrawArrays(GL_LINE_LOOP, 0, d->vertexCount);
@@ -597,8 +663,8 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, renderer->postProcessingTexture);
 
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, renderer->pingPongTexture[!horizontal]);
+    //glActiveTexture(GL_TEXTURE1);
+    //glBindTexture(GL_TEXTURE_2D, renderer->pingPongTexture[!horizontal]);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     // Render text to screen size

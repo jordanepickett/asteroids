@@ -243,6 +243,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     // Systems
     state->entitiesReg = (EntityRegistry*)ArenaAlloc(&memory->permanent, sizeof(EntityRegistry));
     state->render = (RenderSystem*)ArenaAlloc(&memory->permanent, sizeof(RenderSystem));
+    state->light = (LightSystem*)ArenaAlloc(&memory->permanent, sizeof(LightSystem));
     state->textSystem = (TextSystem*)ArenaAlloc(&memory->permanent, sizeof(TextSystem));
     state->movement = (MovementSystem*)ArenaAlloc(&memory->permanent, sizeof(MovementSystem));
     state->health = (HealthSystem*)ArenaAlloc(&memory->permanent, sizeof(HealthSystem));
@@ -262,6 +263,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     // Systems 0
     memset(state->entitiesReg, 0, sizeof(EntityRegistry));
     memset(state->render, 0, sizeof(RenderSystem));
+    memset(state->light, 0, sizeof(LightSystem));
     memset(state->textSystem, 0, sizeof(TextSystem));
     memset(state->movement, 0, sizeof(MovementSystem));
     memset(state->health, 0, sizeof(HealthSystem));
@@ -318,6 +320,11 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
         player,
         FIELD_HEALTH
     );
+
+    EntityID light = CreateEntity2(state);
+    AddLight(state, light, {1, 0}, {1, 1, 1}, 100.0f, 1.0f);
+    AddMovement(state, light, {1, 0}, {0, 1}, {0, 0});
+    AddRender(state, light, MISSLE, 4);
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -387,6 +394,10 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
             glm::vec2 pos = {0,0};
             glm::vec2 rot = {0,1};
             pos = movementSystem->pos[i];
+            if(i == 0) {
+
+                printf("x: %f\n", pos.x);
+            }
             rot = movementSystem->rot[i];
             int count = renderSystem->vertCount[i];
             Vertex *verts = renderSystem->verts[i];

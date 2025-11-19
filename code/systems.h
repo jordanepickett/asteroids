@@ -41,6 +41,15 @@ typedef struct {
 } CameraSystem;
 
 typedef struct {
+    glm::vec2 pos[16];
+    glm::vec3 color[16];
+    float radius[16];
+    float intesity[16];
+    EntityID source[16];
+    unsigned char present[16];
+} LightSystem;
+
+typedef struct {
     glm::vec2 pos[MAX_ENTITIES];
     glm::vec2 rot[MAX_ENTITIES];
     glm::vec2 vel[MAX_ENTITIES];

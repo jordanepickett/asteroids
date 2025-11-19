@@ -3,6 +3,7 @@
 #include "font.h"
 #include "memory.h"
 #include "platform_input.h"
+#include "systems.h"
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 
@@ -16,20 +17,51 @@ static const char* vertexShaderText =
 "uniform mat4 MVP;\n"
 "layout (location = 0) in vec2 vPos;\n"
 "layout (location = 1) in vec4 vCol;\n"
-"out vec4 color;\n"
+"layout (location = 2) in vec3 vNormal;\n"
+"uniform mat4 Model;\n"
+"out vec2 FragPos;\n"
+"out vec4 FragColor;\n"
+"out vec3 FragNormal;\n"
 "void main()\n"
 "{\n"
 "    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
-"    color = vCol;\n"
+"    vec4 worldPos = Model * vec4(vPos, 0.0, 1.0);\n"
+"    FragPos = worldPos.xy;\n"
+"    FragNormal = vNormal;\n"
+"    FragColor = vCol;\n"
 "}\n";
  
 static const char* fragmentShaderText =
-"#version 330\n"
-"in vec4 color;\n"
-"out vec4 fragment;\n"
+"#version 330 core\n"
+"in vec4 FragColor;\n"
+"in vec3 FragNormal;\n"
+"in vec2 FragPos;\n"
+"out vec4 outColor;\n"
+"uniform vec3 lightPos;  // 2D light position, e.g. (1.0, 1.0, 2.0)\n"
+"uniform vec3 lightColor;\n"
+"uniform vec3 ambientColor;\n"
 "void main()\n"
 "{\n"
-"    fragment = vec4(color.rgb, color.a);\n"
+"    float ambientStrength = 0.2;\n"
+"    vec3 lightPos = vec3(0.2, 0.2, 0.2);\n"
+"    vec3 lightColor = vec3(1.0, 0, 0);\n"
+"    // Convert 2D fragment pos to 3D (z=0)\n"
+"    vec3 fragPos3 = vec3(FragPos, 0.0);\n"
+"\n"
+"    vec3 L = normalize(lightPos - fragPos3);\n"
+"\n"
+"    vec3 N = normalize(FragNormal);\n"
+"\n"
+"    float diff = max(dot(N, L), 0.0);\n"
+"        vec3 diffuse = diff * lightColor * 10;\n"
+"    // Ambient (constant)\n"
+"    vec3 ambient = ambientStrength * ambientColor;\n"
+"\n"
+"    // Combine\n"
+"    vec3 lighting = (ambient + diffuse);\n"
+"\n"
+"    vec3 result = FragColor.rgb * lighting;\n"
+"    outColor = vec4(result, FragColor.a);\n"
 "}\n";
 
 static const char* textVertexShader =
@@ -183,7 +215,5 @@ struct PlatformAPI {
 };
 
 void PlatformInit(PlatformRenderer* renderer, const char* vertexShaderText, const char* fragementShaderText);
-
 void PlatformRunGameLoop(PlatformAPI* api, PlatformRenderer *renderer, const char* vertexShaderText, const char* fragementShaderText);
-
-void PlatformRender(PlatformRenderer *renderer, void* buffer, size_t size);
+void PlatformRender(PlatformRenderer *renderer, void* buffer, size_t size, LightSystem* system);
