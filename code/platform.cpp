@@ -529,6 +529,8 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
                 int lightCount = ArrayCount(system->pos);
                 glUniform1i(glGetUniformLocation(renderer->vertexProgram->program, "numLights"), 1);
                 glUniform3f(glGetUniformLocation(renderer->vertexProgram->program, "ambientColor"), 0.3f, 0.8f, 0.9f);
+                glUniform2f(glGetUniformLocation(renderer->vertexProgram->program, "lightPos"), system->pos[0].x, system->pos[0].y);
+                glUniform3f(glGetUniformLocation(renderer->vertexProgram->program, "lightColor"), 0.3f, 0.8f, 0.9f);
 
                 for (int i = 0; i < lightCount && i < 16; i++) {
                     char uniformName[64];

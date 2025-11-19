@@ -394,10 +394,6 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
             glm::vec2 pos = {0,0};
             glm::vec2 rot = {0,1};
             pos = movementSystem->pos[i];
-            if(i == 0) {
-
-                printf("x: %f\n", pos.x);
-            }
             rot = movementSystem->rot[i];
             int count = renderSystem->vertCount[i];
             Vertex *verts = renderSystem->verts[i];
