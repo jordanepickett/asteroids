@@ -597,8 +597,8 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, renderer->postProcessingTexture);
 
-    //glActiveTexture(GL_TEXTURE1);
-    //glBindTexture(GL_TEXTURE_2D, renderer->pingPongTexture[!horizontal]);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, renderer->pingPongTexture[!horizontal]);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
     // Render text to screen size
