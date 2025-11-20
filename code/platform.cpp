@@ -486,12 +486,51 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
     uint8_t* ptr = (uint8_t*)buffer;
     uint8_t* end = ptr + size;
 
-    // Store text commands for later
+    // TODO: Don't use a vector
     std::vector<RenderCommandDrawText*> textCommands;
 
     glBindFramebuffer(GL_FRAMEBUFFER, renderer->frameBuffer);
     glViewport(0, 0, INTERNAL_WIDTH, INTERNAL_HEIGHT);
     glEnable(GL_BLEND);
+
+    glUseProgram(renderer->vertexProgram->program);
+    glBindVertexArray(renderer->vertexVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexVBO);
+
+    //int lightCount = ArrayCount(system->pos);
+    int lightCount = 1;
+    glUniform3f(glGetUniformLocation(renderer->vertexProgram->program, "ambientColor"), 0.2f, 0.8f, 0.9f);
+    //TODO Dynamic count
+    glUniform1i(glGetUniformLocation(renderer->vertexProgram->program, "lightCount"), lightCount);
+    //glUniform2f(glGetUniformLocation(renderer->vertexProgram->program, "lightPos"), system->pos[0].x, system->pos[0].y);
+    //glUniform3f(glGetUniformLocation(renderer->vertexProgram->program, "lightColor"), 0.1f, 0.2f, 0.7f);
+    int lightsInUse = 0;
+    for (int i = 0; i < lightCount && i < 16; i++) {
+        char uniformName[64];
+        if(!system->present[i]) {
+            continue;
+        }
+
+        snprintf(uniformName, sizeof(uniformName), "lights[%d].position", lightsInUse);
+        GLint posLoc = glGetUniformLocation(renderer->vertexProgram->program, uniformName);
+        glUniform3f(posLoc, -system->pos[i].x, system->pos[i].y, 1);
+        //printf("lights[%d].position location: %f\n", i, system->pos[i].x);
+
+        snprintf(uniformName, sizeof(uniformName), "lights[%d].color", lightsInUse);
+        GLint colorLoc = glGetUniformLocation(renderer->vertexProgram->program, uniformName);
+        glUniform3f(colorLoc, system->color[i].r, system->color[i].g, system->color[i].b);
+
+        snprintf(uniformName, sizeof(uniformName), "lights[%d].radius", lightsInUse);
+        GLint radiusLoc = glGetUniformLocation(renderer->vertexProgram->program, uniformName);
+        glUniform1f(radiusLoc, system->radius[i]);
+
+        snprintf(uniformName, sizeof(uniformName), "lights[%d].intesity", lightsInUse);
+        GLint intensityLoc = glGetUniformLocation(renderer->vertexProgram->program, uniformName);
+        glUniform1f(intensityLoc, system->intesity[i]);
+        ++lightsInUse;
+    }
+
+    lightsInUse = 0;
 
     while (ptr < end) {
         RenderCommandHeader* header = (RenderCommandHeader*)ptr;
@@ -516,49 +555,16 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
                 //glm::mat4 proj = glm::ortho(-renderer->ratio, renderer->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
                 glm::mat4 mvp = d->mvp * model;
 
-                glUseProgram(renderer->vertexProgram->program);
-                glBindVertexArray(renderer->vertexVAO);
-                glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexVBO);
-
                 glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "MVP"), 1, GL_FALSE, (const GLfloat*)&mvp);
                 glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "Model"), 
                                    1, GL_FALSE, (const GLfloat*)&model);
 
                 glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
 
-                int lightCount = ArrayCount(system->pos);
-                glUniform1i(glGetUniformLocation(renderer->vertexProgram->program, "numLights"), 1);
-                glUniform3f(glGetUniformLocation(renderer->vertexProgram->program, "ambientColor"), 0.3f, 0.8f, 0.9f);
-                glUniform2f(glGetUniformLocation(renderer->vertexProgram->program, "lightPos"), system->pos[0].x, system->pos[0].y);
-                glUniform3f(glGetUniformLocation(renderer->vertexProgram->program, "lightColor"), 0.3f, 0.8f, 0.9f);
-
-                for (int i = 0; i < lightCount && i < 16; i++) {
-                    char uniformName[64];
-                    if(!system->present[i]) {
-                        continue;
-                    }
-
-                    snprintf(uniformName, sizeof(uniformName), "lights[%d].position", i);
-                    GLint posLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].position");
-                    glUniform2f(posLoc, system->pos[i].x, system->pos[i].y);
-                    //printf("lights[%d].position location: %d\n", 0, posLoc);
-
-                    snprintf(uniformName, sizeof(uniformName), "lights[%d].color", i);
-                    GLint colorLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].color");
-                    glUniform3f(colorLoc, system->color[i].r, system->color[i].g, system->color[i].b);
-
-                    snprintf(uniformName, sizeof(uniformName), "lights[%d].radius", i);
-                    GLint radiusLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].radius");
-                    glUniform1f(radiusLoc, system->radius[i]);
-
-                    snprintf(uniformName, sizeof(uniformName), "lights[%d].intensity", i);
-                    GLint intensityLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].intesity");
-                    glUniform1f(intensityLoc, system->intesity[i]);
-                }
 
                 glDrawArrays(GL_TRIANGLES, 0, d->vertexCount);
 
-                glBindVertexArray(0);
+                //glBindVertexArray(0);
             } break;
             case RENDER_CMD_DRAW_LOOP: {
 
@@ -575,46 +581,14 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
                 //glm::mat4 proj = glm::ortho(-renderer->ratio, renderer->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
                 glm::mat4 mvp = d->mvp * model;
 
-                glUseProgram(renderer->vertexProgram->program);
-                glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexVBO);
-
                 glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "MVP"), 1, GL_FALSE, (const GLfloat*)&mvp);
                 glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "Model"), 
                                    1, GL_FALSE, (const GLfloat*)&model);
 
                 glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
 
-                int lightCount = ArrayCount(system->pos);
-                glUniform1i(glGetUniformLocation(renderer->vertexProgram->program, "numLights"), 1);
-                glUniform3f(glGetUniformLocation(renderer->vertexProgram->program, "ambientLight"), 0.1f, 0.1f, 0.15f);
-
-                for (int i = 0; i < 1 && i < 16; i++) {
-                    char uniformName[64];
-                    if(!system->present[i]) {
-                        continue;
-                    }
-
-                    snprintf(uniformName, sizeof(uniformName), "lights[%d].position", i);
-                    GLint posLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].position");
-                    glUniform2f(posLoc, system->pos[i].x, system->pos[i].y);
-
-                    snprintf(uniformName, sizeof(uniformName), "lights[%d].color", i);
-                    GLint colorLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].color");
-                    glUniform3f(colorLoc, system->color[i].r, system->color[i].g, system->color[i].b);
-
-                    snprintf(uniformName, sizeof(uniformName), "lights[%d].radius", i);
-                    GLint radiusLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].radius");
-                    glUniform1f(radiusLoc, system->radius[i]);
-
-                    snprintf(uniformName, sizeof(uniformName), "lights[%d].intensity", i);
-                    GLint intensityLoc = glGetUniformLocation(renderer->vertexProgram->program, "lights[0].intesity");
-                    glUniform1f(intensityLoc, system->intesity[i]);
-                }
-
-                glBindVertexArray(renderer->vertexVAO);
                 glDrawArrays(GL_LINE_LOOP, 0, d->vertexCount);
 
-                glBindVertexArray(0);
             } break;
             case RENDER_CMD_DRAW_TEXT: {
                 auto* t = (RenderCommandDrawText*)ptr;
@@ -624,6 +598,7 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
 
         ptr += header->size; // move to next command
     }
+    glBindVertexArray(0);
     glDisable(GL_BLEND);
 
     // Bounce the image data around to blur multiple times
