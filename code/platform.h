@@ -1,5 +1,6 @@
 #pragma once
 
+#include "defs.h"
 #include "font.h"
 #include "memory.h"
 #include "platform_input.h"
@@ -11,6 +12,8 @@
 
 static const int INTERNAL_WIDTH = 1280;
 static const int INTERNAL_HEIGHT = 720;
+
+static const int MAX_UNIFORMS = 25;
 
 static const char* vertexShaderText =
 "#version 330\n"
@@ -37,7 +40,6 @@ static const char* fragmentShaderText =
 "in vec3 FragNormal;\n"
 "in vec2 FragPos;\n"
 "out vec4 outColor;\n"
-"uniform vec3 ambientColor;\n"
 "    struct Light {\n"
 "    vec3 position;\n"
 "    vec3 color;\n"
@@ -45,6 +47,7 @@ static const char* fragmentShaderText =
 "    float intesity;\n"
 "};\n"
 "\n"
+"uniform vec3 ambientColor;\n"
 "uniform Light lights[16];\n"
 "uniform int lightCount;\n"
 "void main()\n"
@@ -54,7 +57,7 @@ static const char* fragmentShaderText =
 "    // Convert 2D fragment pos to 3D (z=0)\n"
 "    vec3 fragPos3 = vec3(FragPos, 0.0);\n"
 "\n"
-"   vec3 totalLight = ambientStrength * vec3(1.0);\n"
+"   vec3 totalLight = ambientStrength * ambientColor;\n"
 "\n"
 "    // Add each light’s diffuse contribution\n"
 "    for (int i = 0; i < lightCount; i++)\n"
@@ -72,7 +75,7 @@ static const char* fragmentShaderText =
 "        float attenuation = 1.0 - (dist / lights[i].radius);\n"
 "        attenuation = attenuation * attenuation; // smooth quadratic falloff\n"
 "\n"
-"        totalLight += diff * attenuation * lights[i].color * lights[i].intesity;\n"
+"        totalLight += diff * attenuation * lights[i].color * 100;\n"
 "   }\n"
 "\n"
 "    // Apply lighting to base color\n"
@@ -188,6 +191,8 @@ static const char* blurFragment =
 
 struct Program {
     GLuint program;
+    int uniformLocations[MAX_UNIFORMS];
+    int lightUniforms[MAX_LIGHTS][LIGHT_UNIFORM_COUNT];
 };
 
 struct PlatformRenderer {

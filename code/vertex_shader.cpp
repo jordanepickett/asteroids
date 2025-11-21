@@ -1,5 +1,7 @@
 #include "platform.h"
+#include "light_uniforms.h"
 #include <GLFW/glfw3.h>
+#include <cstdio>
 #include <glm/gtc/type_ptr.hpp>
 
 static void VertexShaderInit(PlatformRenderer* renderer, Program* program, const char* textVertexShader, const char* textFragmentShader) {
@@ -16,7 +18,17 @@ static void VertexShaderInit(PlatformRenderer* renderer, Program* program, const
     glAttachShader(program->program, vertexShader);
     glAttachShader(program->program, fragmentShader);
     glLinkProgram(program->program);
+    for (int i = 0; i < U_COUNT; i++) {
+        program->uniformLocations[i] = -1;
+    }
 
+    for (int i = 0; i < sizeof(UNIFORM_TABLE)/sizeof(UniformDef); i++)
+    {
+        auto entry = UNIFORM_TABLE[i];
+        program->uniformLocations[entry.id] =
+            glGetUniformLocation(program->program, entry.name);
+    }
+    LightUniformsInit(program);
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 }

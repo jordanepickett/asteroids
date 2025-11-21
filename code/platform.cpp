@@ -1,3 +1,4 @@
+#include "defs.h"
 #include "systems.h"
 #include "text_shader.cpp"
 #include "vertex_shader.cpp"
@@ -449,7 +450,7 @@ static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 p
     glBindVertexArray(renderer->textVAO);
     glBindTexture(GL_TEXTURE_2D, usedFont->texture_id);
     
-    glUniformMatrix4fv(glGetUniformLocation(renderer->textProgram->program, "MVP"), 1, GL_FALSE, &mvp[0][0]);
+    glUniformMatrix4fv(renderer->textProgram->uniformLocations[U_MVP], 1, GL_FALSE, &mvp[0][0]);
 
     glm::vec2 posOffset = GetAnchoredPosition(anchor, pos, { renderer->width, renderer->height });
     float x = posOffset.x;
@@ -497,40 +498,7 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
     glBindVertexArray(renderer->vertexVAO);
     glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexVBO);
 
-    //int lightCount = ArrayCount(system->pos);
-    int lightCount = 1;
-    glUniform3f(glGetUniformLocation(renderer->vertexProgram->program, "ambientColor"), 0.2f, 0.8f, 0.9f);
-    //TODO Dynamic count
-    glUniform1i(glGetUniformLocation(renderer->vertexProgram->program, "lightCount"), lightCount);
-    //glUniform2f(glGetUniformLocation(renderer->vertexProgram->program, "lightPos"), system->pos[0].x, system->pos[0].y);
-    //glUniform3f(glGetUniformLocation(renderer->vertexProgram->program, "lightColor"), 0.1f, 0.2f, 0.7f);
-    int lightsInUse = 0;
-    for (int i = 0; i < lightCount && i < 16; i++) {
-        char uniformName[64];
-        if(!system->present[i]) {
-            continue;
-        }
-
-        snprintf(uniformName, sizeof(uniformName), "lights[%d].position", lightsInUse);
-        GLint posLoc = glGetUniformLocation(renderer->vertexProgram->program, uniformName);
-        glUniform3f(posLoc, -system->pos[i].x, system->pos[i].y, 1);
-        //printf("lights[%d].position location: %f\n", i, system->pos[i].x);
-
-        snprintf(uniformName, sizeof(uniformName), "lights[%d].color", lightsInUse);
-        GLint colorLoc = glGetUniformLocation(renderer->vertexProgram->program, uniformName);
-        glUniform3f(colorLoc, system->color[i].r, system->color[i].g, system->color[i].b);
-
-        snprintf(uniformName, sizeof(uniformName), "lights[%d].radius", lightsInUse);
-        GLint radiusLoc = glGetUniformLocation(renderer->vertexProgram->program, uniformName);
-        glUniform1f(radiusLoc, system->radius[i]);
-
-        snprintf(uniformName, sizeof(uniformName), "lights[%d].intesity", lightsInUse);
-        GLint intensityLoc = glGetUniformLocation(renderer->vertexProgram->program, uniformName);
-        glUniform1f(intensityLoc, system->intesity[i]);
-        ++lightsInUse;
-    }
-
-    lightsInUse = 0;
+    AddLightsFrame(renderer->vertexProgram, system);
 
     while (ptr < end) {
         RenderCommandHeader* header = (RenderCommandHeader*)ptr;
@@ -555,8 +523,8 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
                 //glm::mat4 proj = glm::ortho(-renderer->ratio, renderer->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
                 glm::mat4 mvp = d->mvp * model;
 
-                glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "MVP"), 1, GL_FALSE, (const GLfloat*)&mvp);
-                glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "Model"), 
+                glUniformMatrix4fv(renderer->vertexProgram->uniformLocations[U_MVP], 1, GL_FALSE, (const GLfloat*)&mvp);
+                glUniformMatrix4fv(renderer->vertexProgram->uniformLocations[U_MODEL], 
                                    1, GL_FALSE, (const GLfloat*)&model);
 
                 glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
@@ -581,8 +549,8 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
                 //glm::mat4 proj = glm::ortho(-renderer->ratio, renderer->ratio, -1.0f, 1.0f, 1.0f, -1.0f);
                 glm::mat4 mvp = d->mvp * model;
 
-                glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "MVP"), 1, GL_FALSE, (const GLfloat*)&mvp);
-                glUniformMatrix4fv(glGetUniformLocation(renderer->vertexProgram->program, "Model"), 
+                glUniformMatrix4fv(renderer->vertexProgram->uniformLocations[U_MVP], 1, GL_FALSE, (const GLfloat*)&mvp);
+                glUniformMatrix4fv(renderer->vertexProgram->uniformLocations[U_MODEL], 
                                    1, GL_FALSE, (const GLfloat*)&model);
 
                 glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
@@ -600,36 +568,6 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
     }
     glBindVertexArray(0);
     glDisable(GL_BLEND);
-
-    // Bounce the image data around to blur multiple times
-    bool horizontal = true, first_iteration = true;
-    // Amount of time to bounce the blur
-    int amount = 2;
-    glUseProgram(renderer->blurProgram->program);
-    for (unsigned int i = 0; i < amount; i++)
-    {
-        glBindFramebuffer(GL_FRAMEBUFFER, renderer->pingPongBuffer[horizontal]);
-        glUniform1i(glGetUniformLocation(renderer->blurProgram->program, "horizontal"), horizontal);
-
-        // In the first bounc we want to get the data from the bloomTexture
-        if (first_iteration)
-        {
-            glBindTexture(GL_TEXTURE_2D, renderer->bloomTexture);
-            first_iteration = false;
-        }
-        // Move the data between the pingPong textures
-        else {
-            glBindTexture(GL_TEXTURE_2D, renderer->pingPongTexture[!horizontal]);
-        }
-
-        // Render the image
-        glBindVertexArray(renderer->screenVAO);
-        glDisable(GL_DEPTH_TEST);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        // Switch between vertical and horizontal blurring
-        horizontal = !horizontal;
-    }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, renderer->width, renderer->height);

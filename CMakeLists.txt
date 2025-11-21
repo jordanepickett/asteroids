@@ -6,7 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 
 # Collect all source files from code/
-file(GLOB_RECURSE SOURCES code/*.cpp)
+# file(GLOB_RECURSE SOURCES code/*.cpp)
+file(GLOB_RECURSE SOURCES code/*.cpp code/*/*.cpp)
 
 add_executable(asteroids ${SOURCES})
 
