@@ -5,7 +5,10 @@
 typedef int32_t EntityID;
 #define INVALID_ENTITY_ID (-1)
 #define MAX_ENTITIES 64
+
 #define MAX_FLOATABLES 15
+#define MAX_EMITTERS 5
+#define MAX_PARTICLES 25
 #define MAX_LIFETIMES 15
 
 #define MAX_LIGHTS 16
