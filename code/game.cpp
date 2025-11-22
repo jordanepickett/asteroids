@@ -326,6 +326,11 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     AddMovement(state, light, {1, 0}, {0, 1}, {0, 0});
     AddRender(state, light, MISSLE, 4);
 
+    EntityID light2= CreateEntity2(state);
+    AddLight(state, light2, {15, 15}, {0, 0, 1}, 15.0f, 50.0f);
+    AddMovement(state, light2, {15, 15}, {0, 1}, {0, 0});
+    AddRender(state, light2, MISSLE, 4);
+
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {

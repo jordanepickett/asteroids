@@ -27,7 +27,7 @@ void AddLightsFrame(Program* program, LightSystem* system) {
     int lightCount = ArrayCount(system->pos);
     glUniform3f(program->uniformLocations[U_AMBIENT], 0.5f, 0.8f, 0.9f);
     //TODO Dynamic count
-    glUniform1i(program->uniformLocations[U_LIGHTCOUNT], 1);
+    glUniform1i(program->uniformLocations[U_LIGHTCOUNT], 2);
     int lightsInUse = 0;
     for (int i = 0; i < lightCount && i < 16; i++) {
         char uniformName[64];
