@@ -1,4 +1,5 @@
 #include "systems.h"
+#include "particles.h"
 #include "defs.h"
 #include "game.h"
 #include "input.cpp"
@@ -99,6 +100,41 @@ static void AddCamera(
     system->isActive[id] = isActive;
     system->present[id] = 1;
     state->entitiesReg->comp[id] |= COMP_CAMERA;
+}
+
+static void AddEmitter(
+    GameState *state,
+    EntityID id,
+    glm::vec2 pos,
+    glm::vec2 spawnVelocityBase,
+    glm::vec2 spawnVelocityVariance,
+    float spawnRate,
+    float spawnTimer,        // Accumulator
+    float particleLifetime,
+    glm::vec4 startColor,
+    glm::vec4 endColor,
+    float startSize,
+    float endSize,
+    EntityID parentEntity = -1) {
+    printf("Adding Emitter to: %i\n", id);
+    assert(id >= 0 && id < MAX_ENTITIES);
+    EmitterSystem *system = state->emitter;
+
+    system->pos[id] = pos;
+    system->spawnVelocityBase[id] = spawnVelocityBase;
+    system->spawnVelocityVariance[id] = spawnVelocityVariance;
+    system->spawnRate[id] = spawnRate;
+    system->spawnTimer[id] = spawnTimer;        // Accumulator
+    system->particleLifetime[id] = particleLifetime;
+    system->startColor[id] = startColor;
+    system->endColor[id] = endColor;
+    system->startSize[id] = startSize;
+    system->endSize[id] = endSize;
+    if(parentEntity != -1) {
+        system->parentEntity[id] = parentEntity;   // Optional entity to follow
+    }
+    system->present[id] = 1;
+    state->entitiesReg->comp[id] |= COMP_EMITTER;
 }
 
 static void AddText(
@@ -224,6 +260,7 @@ static void AddPlayerInput(GameState *state, EntityID id) {
     state->entitiesReg->comp[id] |= COMP_PLAYER_INPUT;
 }
 
+
 static void AddFloatable(GameState *state, EntityID id) {
     printf("Adding Floatable to: %i\n", id);
     assert(id >= 0 && id < MAX_ENTITIES);
@@ -241,6 +278,48 @@ static void MovementUpdate(GameState* state, PlatformFrame *frame) {
         }
         system->pos[i].x += system->vel[i].x * frame->deltaTime;
         system->pos[i].y += system->vel[i].y * frame->deltaTime;
+    }
+}
+
+static glm::vec2 RandomVariance(glm::vec2 variance)
+{
+    return glm::vec2(
+        ((float)rand() / RAND_MAX * 2.f - 1.f) * variance.x,
+        ((float)rand() / RAND_MAX * 2.f - 1.f) * variance.y
+    );
+}
+
+static void EmitterUpdate(GameState* state, float deltaTime) {
+    EmitterSystem* system = state->emitter;
+    ParticleSystem* particleSystem = state->particles;
+    for (EntityID i = 0; i < state->entitiesReg->count; ++i) {
+        if(!(state->entitiesReg->comp[i] & COMP_EMITTER)) {
+            continue;
+        }
+        if((state->entitiesReg->comp[i] & COMP_MOVEMENT)) {
+            system->pos[i] = state->movement->pos[i];
+        }
+        glm::vec2 parentVelocity = { 0, 0 };
+        system->spawnTimer[i] += deltaTime;
+        float spawnInterval = 1.0f / system->spawnRate[i];
+        int count = 50;
+
+        while (system->spawnTimer[i] >= spawnInterval) {
+            system->spawnTimer[i] -= spawnInterval;
+            int created = 0;
+
+            while(created < count) {
+                // Add parent velocity to emitted particles
+                glm::vec2 vel = system->spawnVelocityBase[i] + 
+                    parentVelocity +
+                    RandomVariance(system->spawnVelocityVariance[i]);
+
+                CreateParticle(particleSystem, system->pos[i], vel,
+                               system->particleLifetime[i],
+                               system->startColor[i]);
+                created++;
+            }
+        }
     }
 }
 

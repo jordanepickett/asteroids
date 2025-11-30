@@ -2,6 +2,7 @@
 #include "systems.h"
 #include "text_shader.cpp"
 #include "vertex_shader.cpp"
+#include "particle_shader.cpp"
 #include "base_post_shader.cpp"
 #include "blur_shader.cpp"
 #include "entity.h"
@@ -88,6 +89,24 @@ void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
 
     glBindVertexArray(0);
 
+    // Particle VAO/VBO
+    glGenVertexArrays(1, &renderer->particleVAO);
+    glBindVertexArray(renderer->particleVAO);
+
+    glGenBuffers(1, &renderer->particleVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->particleVBO);
+
+    // Set attribute layout for this VAO
+    glEnableVertexAttribArray(0); // position
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(ParticleVertex),
+                          (void*)offsetof(ParticleVertex, position));
+
+    glEnableVertexAttribArray(1); // color
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleVertex),
+                          (void*)offsetof(ParticleVertex, color));
+
+    glBindVertexArray(0);
+
     // Text VAO/VBO
     glGenVertexArrays(1, &renderer->textVAO);
     glBindVertexArray(renderer->textVAO);
@@ -133,6 +152,11 @@ void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
     Program* vertexProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
     renderer->vertexProgram = vertexProgram;
     VertexShaderInit(renderer, renderer->vertexProgram, vertexShaderText, fragmentShaderText);
+
+    //Particle Shader
+    Program* particleProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
+    renderer->particleProgram = particleProgram;
+    ParticleShaderInit(renderer->particleProgram, particleShader, particleFragment);
 
     //Texture Shader
     Program* textProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
@@ -556,6 +580,26 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
                 glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
 
                 glDrawArrays(GL_LINE_LOOP, 0, d->vertexCount);
+
+            } break;
+            case RENDER_CMD_BATCH_PARTICLES: {
+                auto* d = (RenderCommandBatchParticles*)ptr;
+                void* verts = (uint8_t*)d + sizeof(RenderCommandBatchParticles);
+                glm::mat4 mvp = d->mvp;
+
+                glEnable(GL_PROGRAM_POINT_SIZE);
+                glUseProgram(renderer->particleProgram->program);
+                glBindVertexArray(renderer->particleVAO);
+                glBindBuffer(GL_ARRAY_BUFFER, renderer->particleVBO);
+                glUniformMatrix4fv(
+                    renderer->particleProgram->uniformLocations[U_MVP],
+                    1,
+                    GL_FALSE,
+                    (float*)&mvp[0][0]
+                );
+                glBufferData(GL_ARRAY_BUFFER, d->vertexCount * sizeof(ParticleVertex), verts, GL_STREAM_DRAW);
+                glDrawArrays(GL_POINTS, 0, d->vertexCount);
+                glDisable(GL_PROGRAM_POINT_SIZE);
 
             } break;
             case RENDER_CMD_DRAW_TEXT: {

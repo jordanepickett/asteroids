@@ -15,5 +15,6 @@ enum {
     COMP_FLOATABLE = 1 << 9,
     COMP_TEXT = 1 << 10,
     COMP_LIGHT = 1 << 11,
+    COMP_EMITTER = 1 << 12,
 };
 

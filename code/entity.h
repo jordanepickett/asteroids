@@ -25,6 +25,11 @@ struct Vertex {
     glm::vec3 normal;
 };
 
+struct ParticleVertex {
+    glm::vec2 position;
+    glm::vec4 color;
+};
+
 struct TextVertex {
     glm::vec2 position;
     glm::vec2 uv;

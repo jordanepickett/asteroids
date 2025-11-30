@@ -59,12 +59,14 @@ static void ProcessCollisions(GameState *state) {
         EntityID b = queue->events[i].b;
 
         if(state->entitiesReg->comp[a] & COMP_DAMAGE) {
+            // Check if has health
             if(state->damage->tags[a] & state->entitiesReg->tag[b]) {
                 CheckAndDeleteEntity(state, b);
             }
         }
 
         if(state->entitiesReg->comp[b] & COMP_DAMAGE) {
+            // Check if has health
             if(state->damage->tags[b] & state->entitiesReg->tag[a]) {
                 CheckAndDeleteEntity(state, a);
             }

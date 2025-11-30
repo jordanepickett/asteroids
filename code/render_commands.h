@@ -15,7 +15,8 @@ enum RenderCommandType {
     RENDER_CMD_CLEAR,
     RENDER_CMD_DRAW_TRIANGLES,
     RENDER_CMD_DRAW_LOOP,
-    RENDER_CMD_DRAW_TEXT
+    RENDER_CMD_DRAW_TEXT,
+    RENDER_CMD_BATCH_PARTICLES
 };
 
 struct RenderCommandHeader {
@@ -32,6 +33,13 @@ struct RenderCommandDrawTriangles {
     RenderCommandHeader header;
     glm::vec2 pos;
     glm::vec2 rotation;
+    glm::mat4 mvp;
+    int vertexCount;
+    const void* vertices;
+};
+
+struct RenderCommandBatchParticles {
+    RenderCommandHeader header;
     glm::mat4 mvp;
     int vertexCount;
     const void* vertices;

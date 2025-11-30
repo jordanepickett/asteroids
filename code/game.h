@@ -60,6 +60,8 @@ typedef struct {
     LifeTimeSystem *lifetime;
     FloatableSystem *floatable;
     CollisionSystem *collision;
+    EmitterSystem *emitter;
+    ParticleSystem *particles;
 } GameState;
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory);

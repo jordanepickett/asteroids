@@ -6,6 +6,7 @@
 #include "queues.cpp"
 #include "render_commands.h"
 #include "systems.h"
+#include "particles.h"
 #include <cstdarg>
 #include <cstdio>
 #include <cstring>
@@ -82,6 +83,23 @@ static void PushTextf(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::
     va_end(args);
     
     PushText(state, arena, pos, color, buffer, anchor);
+}
+
+inline void PushParticleBatch(
+    glm::mat4 mvp,
+    MemoryArena *memory,
+    ParticleVertex *verts,
+    int vertexCount
+) {
+
+    size_t size = sizeof(RenderCommandBatchParticles) + vertexCount * sizeof(ParticleVertex); // assuming simple 2D verts
+    auto* drawCmd = (RenderCommandBatchParticles*)ArenaAlloc(memory, size);
+    drawCmd->header.type = RENDER_CMD_BATCH_PARTICLES;
+    drawCmd->header.size = (uint32_t)size;
+    drawCmd->mvp = mvp;
+    drawCmd->vertexCount = vertexCount;
+    void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandBatchParticles);
+    memcpy(dst, verts, vertexCount * sizeof(ParticleVertex));
 }
 
 inline void PushTrianges2(
@@ -242,6 +260,8 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     
     // Systems
     state->entitiesReg = (EntityRegistry*)ArenaAlloc(&memory->permanent, sizeof(EntityRegistry));
+    state->emitter = (EmitterSystem*)ArenaAlloc(&memory->permanent, sizeof(EmitterSystem));
+    state->particles = (ParticleSystem*)ArenaAlloc(&memory->permanent, sizeof(ParticleSystem));
     state->render = (RenderSystem*)ArenaAlloc(&memory->permanent, sizeof(RenderSystem));
     state->light = (LightSystem*)ArenaAlloc(&memory->permanent, sizeof(LightSystem));
     state->textSystem = (TextSystem*)ArenaAlloc(&memory->permanent, sizeof(TextSystem));
@@ -262,6 +282,8 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
 
     // Systems 0
     memset(state->entitiesReg, 0, sizeof(EntityRegistry));
+    memset(state->emitter, 0, sizeof(EmitterSystem));
+    memset(state->particles, 0, sizeof(ParticleSystem));
     memset(state->render, 0, sizeof(RenderSystem));
     memset(state->light, 0, sizeof(LightSystem));
     memset(state->textSystem, 0, sizeof(TextSystem));
@@ -331,6 +353,23 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     AddMovement(state, light2, {15, 15}, {0, 1}, {0, 0});
     AddRender(state, light2, MISSLE, 4);
 
+    EntityID emitter = CreateEntity2(state);
+    AddMovement(state, emitter, {-20, 0}, {0, 1}, {5, 0});
+    AddEmitter(
+        state,
+        emitter,
+        {-20, 0},
+        {0, 0},
+        {5, 6},
+        5,
+        0,
+        1,
+        {0, 1, 1, 1},
+        {0, 1, 1, 1},
+        1,
+        1
+    );
+
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -355,11 +394,14 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
     ProcessProjectileFire(state);
 
     // Systems
+    EmitterUpdate(state, frame->deltaTime);
     MovementUpdate(state, frame);
     LifeTimeUpdate(state, frame);
 
     CollisionUpdate(state, state->collisions);
     ProcessCollisions(state);
+
+    UpdateParticles(state->particles, frame->deltaTime);
 
     if(state->camera.isLocked) {
         WrapSystem(state);
@@ -434,8 +476,7 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
                             color,
                             anchor,
                             "HEALTH: %i",
-                            (int)hp, 
-                            BOTTOM_RIGHT
+                            (int)hp
                         );
                     }
                     break;
@@ -448,13 +489,28 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
                             color,
                             anchor,
                             "HEALTH: %f",
-                            100.0f, 
-                            BOTTOM_RIGHT
+                            100.0f
                         );
                     }
                     break;
             }
         }
+    }
+
+    int vertexCount = 0;
+    static ParticleVertex verts[MAX_PARTICLES];
+    for(int i = 0; i < state->particles->count; i++) {
+        if(!state->particles->active[i]) {
+            continue;
+        }
+        glm::vec2 pos = state->particles->pos[i];
+        glm::vec4 color = state->particles->color[i];
+        verts[vertexCount] = { pos, color };
+        vertexCount++;
+    }
+
+    if(vertexCount > 0) {
+        PushParticleBatch(cameraMvp, &memory->transient, verts, vertexCount);
     }
 
     // TODO: Text

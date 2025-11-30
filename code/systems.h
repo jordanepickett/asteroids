@@ -28,18 +28,19 @@ typedef struct {
 } TextSystem;
 
 typedef struct {
-    glm::vec2 position[MAX_PARTICLES];
+    glm::vec2 pos[MAX_PARTICLES];
     glm::vec2 velocity[MAX_PARTICLES];
     glm::vec4 color[MAX_PARTICLES];
+    glm::vec2 rotation[MAX_PARTICLES];
     float lifetime[MAX_PARTICLES];
     float size[MAX_PARTICLES];
-    float rotation[MAX_PARTICLES];
     unsigned char active[MAX_PARTICLES];
-    unsigned char present[20];
+    unsigned char present[MAX_PARTICLES];
+    int count;
 } ParticleSystem;
 
 typedef struct {
-    glm::vec2 emitterPos[MAX_EMITTERS];
+    glm::vec2 pos[MAX_EMITTERS];
     glm::vec2 spawnVelocityBase[MAX_EMITTERS];
     glm::vec2 spawnVelocityVariance[MAX_EMITTERS];
     float spawnRate[MAX_EMITTERS];         // Particles per second
@@ -50,7 +51,7 @@ typedef struct {
     float startSize[MAX_EMITTERS];
     float endSize[MAX_EMITTERS];
     EntityID parentEntity[MAX_EMITTERS];   // Optional entity to follow
-    unsigned char active[MAX_EMITTERS];
+    unsigned char present[MAX_EMITTERS];
 } EmitterSystem;
 
 typedef struct {

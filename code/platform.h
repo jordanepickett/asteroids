@@ -83,6 +83,30 @@ static const char* fragmentShaderText =
 "    outColor = vec4(result, FragColor.a);\n"
 "}\n";
 
+static const char* particleShader = 
+"#version 330 core\n"
+"layout (location = 0) in vec2 vPos;\n"
+"layout (location = 1) in vec4 vCol;\n"
+"\n"
+"uniform mat4 MVP;\n"
+"\n"
+"out vec4 Color;\n"
+"\n"
+"void main() {\n"
+"    gl_Position = MVP * vec4(vPos, 0.0, 1.0);\n"
+"    Color = vCol;\n"
+"}\n";
+
+static const char* particleFragment = 
+"#version 330 core\n"
+"\n"
+"in vec4 Color;\n"
+"out vec4 FragColor;\n"
+"\n"
+"void main() {\n"
+"    FragColor = Color;\n"
+"}\n";
+
 static const char* textVertexShader =
 "#version 330\n"
 "uniform mat4 MVP;\n"
@@ -197,7 +221,7 @@ struct Program {
 
 struct PlatformRenderer {
     //VAO/VBO
-    GLuint vertexVAO,vertexVBO, textVAO, textVBO, screenVAO, screenVBO;
+    GLuint vertexVAO,vertexVBO, particleVAO, particleVBO, textVAO, textVBO, screenVAO, screenVBO;
 
     // Textures
     GLuint renderTexture, frameBuffer, postProcessingTexture, bloomTexture;
@@ -206,6 +230,7 @@ struct PlatformRenderer {
     // Programs
     Program* textProgram;
     Program* vertexProgram;
+    Program* particleProgram;
     Program* basePostProgram;
     Program* blurProgram;
     
