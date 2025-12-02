@@ -1,5 +1,6 @@
 #pragma once
 
+#include "defs.h"
 #include "systems.h"
 #include <glm/glm.hpp>
 
@@ -78,7 +79,8 @@ void CreateParticle(ParticleSystem *system,
                     glm::vec2 pos, 
                     glm::vec2 vel,
                     float lifetime,
-                    glm::vec4 color);
+                    glm::vec4 startColor,
+                    glm::vec4 endColor);
 
 
 void UpdateParticles(ParticleSystem *system, float dt);

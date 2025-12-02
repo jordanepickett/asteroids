@@ -4,7 +4,7 @@
 #include "glm/ext/vector_float2.hpp"
 
 typedef struct {
-    struct { EntityID a, b; } events[20];
+    struct { EntityID a, b; } events[50];
     int count;
 } CollisionQueue;
 

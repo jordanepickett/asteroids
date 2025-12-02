@@ -3,6 +3,7 @@
 #include "queues.h"
 #include "game.h"
 #include "systems.h"
+#include <cassert>
 
 static void CollisionQueueInit(CollisionQueue *q) { q->count = 0; }
 
@@ -53,6 +54,7 @@ inline void CheckAndDeleteEntity(GameState *state, EntityID id) {
 static void ProcessCollisions(GameState *state) {
     CollisionQueue *queue = state->collisions;
     MovementSystem *movement = state->movement;
+    assert(queue->count < 50);
 
     for(int i = 0; i < queue->count; i++) {
         EntityID a = queue->events[i].a;

@@ -31,7 +31,9 @@ typedef struct {
     glm::vec2 pos[MAX_PARTICLES];
     glm::vec2 velocity[MAX_PARTICLES];
     glm::vec4 color[MAX_PARTICLES];
-    glm::vec2 rotation[MAX_PARTICLES];
+    glm::vec4 startColor[MAX_PARTICLES];
+    glm::vec4 endColor[MAX_PARTICLES];
+    float totalLifetime[MAX_PARTICLES];
     float lifetime[MAX_PARTICLES];
     float size[MAX_PARTICLES];
     unsigned char active[MAX_PARTICLES];

@@ -7,8 +7,8 @@ typedef int32_t EntityID;
 #define MAX_ENTITIES 64
 
 #define MAX_FLOATABLES 15
-#define MAX_EMITTERS 5
-#define MAX_PARTICLES 300
+#define MAX_EMITTERS 64
+#define MAX_PARTICLES 2000
 #define MAX_LIFETIMES 15
 
 #define MAX_LIGHTS 16

@@ -354,22 +354,38 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     AddRender(state, light2, MISSLE, 4);
 
     EntityID emitter = CreateEntity2(state);
-    AddMovement(state, emitter, {-20, 0}, {0, 1}, {5, 0});
+    AddMovement(state, emitter, {-10, 0}, {0, 1}, {10, 0});
     AddEmitter(
         state,
         emitter,
-        {-20, 0},
+        {-10, 0},
         {0, 0},
-        {5, 6},
-        5,
+        {5, 5},
+        25,
         0,
-        1,
-        {0, 1, 1, 1},
-        {0, 1, 1, 1},
+        0.5,
+        {1, 1, 0, 1},
+        {1, 0, 0, 1},
         1,
         1
     );
 
+    EntityID emitter2 = CreateEntity2(state);
+    AddMovement(state, emitter2, {10, 0}, {0, 1}, {-10, 0});
+    AddEmitter(
+        state,
+        emitter2,
+        {-10, 0},
+        {0, 0},
+        {5, 5},
+        25,
+        0,
+        0.5,
+        {1, 0.3, 0, 1},
+        {1, 0, 0, 1},
+        1,
+        1
+    );
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -515,6 +531,9 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
 
     // TODO: Text
     PushTextf(state, &memory->transient, {10, 20}, {1,1,1,1}, TOP_LEFT, "FPS: %f", (1.0f / frame->deltaTime));
+    size_t size_in_bytes = sizeof(&frame);
+    double size_in_kb = (size_in_bytes) / 1024.0;
+    PushTextf(state, &memory->transient, {500, 20}, {1,1,1,1}, TOP_RIGHT, "Size: %f", size_in_bytes);
 
 
     state->commands = memory->transient.base;

@@ -117,7 +117,7 @@ static void AddEmitter(
     float endSize,
     EntityID parentEntity = -1) {
     printf("Adding Emitter to: %i\n", id);
-    assert(id >= 0 && id < MAX_ENTITIES);
+    assert(id >= 0 && id < MAX_EMITTERS);
     EmitterSystem *system = state->emitter;
 
     system->pos[id] = pos;
@@ -134,6 +134,9 @@ static void AddEmitter(
         system->parentEntity[id] = parentEntity;   // Optional entity to follow
     }
     system->present[id] = 1;
+    printf("index: %i\n", id);
+    printf("r: %f, g: %f, b: %f\n", endColor.r, endColor.g, endColor.b);
+    printf("r: %f, g: %f, b: %f\n", system->endColor[id].r, system->endColor[id].g, system->endColor[id].b);
     state->entitiesReg->comp[id] |= COMP_EMITTER;
 }
 
@@ -299,26 +302,23 @@ static void EmitterUpdate(GameState* state, float deltaTime) {
         if((state->entitiesReg->comp[i] & COMP_MOVEMENT)) {
             system->pos[i] = state->movement->pos[i];
         }
+        //system->endColor[i] = {1, 0, 0, 1};
         glm::vec2 parentVelocity = { 0, 0 };
         system->spawnTimer[i] += deltaTime;
         float spawnInterval = 1.0f / system->spawnRate[i];
-        int count = 50;
 
         while (system->spawnTimer[i] >= spawnInterval) {
             system->spawnTimer[i] -= spawnInterval;
-            int created = 0;
 
-            while(created < count) {
-                // Add parent velocity to emitted particles
-                glm::vec2 vel = system->spawnVelocityBase[i] + 
-                    parentVelocity +
-                    RandomVariance(system->spawnVelocityVariance[i]);
+            // Add parent velocity to emitted particles
+            glm::vec2 vel = system->spawnVelocityBase[i] + 
+                parentVelocity +
+                RandomVariance(system->spawnVelocityVariance[i]);
 
-                CreateParticle(particleSystem, system->pos[i], vel,
-                               system->particleLifetime[i],
-                               system->startColor[i]);
-                created++;
-            }
+            CreateParticle(particleSystem, system->pos[i], vel,
+                           system->particleLifetime[i],
+                           system->startColor[i],
+                           system->endColor[i]);
         }
     }
 }
