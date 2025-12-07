@@ -51,3 +51,15 @@ void PlaySound(PlatformAudio *audio, ma_sound *sound, AudioBus bus) {
 void StopSound(ma_sound *sound) {
     ma_sound_stop(sound);
 }
+
+void FadeInSound(PlatformAudio *audio, ma_sound *sound, AudioBus bus, float ms) {
+    ma_sound_set_volume(sound, 0.2f);
+    ma_sound_set_stop_time_in_milliseconds(sound, ~(ma_uint64)0);
+    ma_sound_set_fade_in_milliseconds(sound, 0.0f, 1.0f, 2000.0f);
+    ma_sound_seek_to_pcm_frame(sound, 0);
+    ma_sound_start(sound);
+}
+
+void FadeOutSound(ma_sound *sound, float ms) {
+    ma_sound_stop_with_fade_in_milliseconds(sound, ms);
+}

@@ -35,3 +35,6 @@ bool LoadMusic(PlatformAudio* audio, const char* path, ma_sound* out, AudioBus b
 
 void PlaySound(PlatformAudio* audio, ma_sound* sound, AudioBus bus); 
 void StopSound(ma_sound* sound);
+
+void FadeInSound(PlatformAudio* audio, ma_sound* sound, AudioBus bus, float ms);
+void FadeOutSound(ma_sound* sound, float ms);

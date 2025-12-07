@@ -413,6 +413,13 @@ void PlatformRunGameLoop(PlatformAPI *api,
             frame.input.controllers[0] = newInput->controllers[0];
         }
 
+        if(frame.input.controllers[0].leftShoulder.endedDown) {
+            StopSound(&music);
+        }
+        if(frame.input.controllers[0].actionUp.endedDown) {
+            PlaySound(audio, &music, musicBus);
+        }
+
         glfwGetFramebufferSize(window, &renderer->width, &renderer->height);
         renderer->ratio = renderer->width / (float) renderer->height;
 
