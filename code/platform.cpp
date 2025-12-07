@@ -1,4 +1,5 @@
 #include "audio/audio.h"
+#include "input.cpp"
 #include "defs.h"
 #include "systems.h"
 #include "text_shader.cpp"
@@ -319,14 +320,27 @@ void PlatformRunGameLoop(PlatformAPI *api,
     GameInput *oldInput = &input[1];
 
     // Sound test
-    AudioBus musicBus = CreateAudioBus(audio);
+    AudioBus musicBus = CreateAudioBus(audio, 0.1f);
+    AudioBus ambientBus = CreateAudioBus(audio, 0.3f);
+    AudioBus sfxBus = CreateAudioBus(audio, 0.3f);
     ma_sound music;
+    ma_sound ambient;
 
-    if (!LoadMusic(audio, "song18.mp3", &music, musicBus)) {
-        printf("Failed to load music\n");
+    if(!LoadMusic(audio, "song18.mp3", &music, musicBus)) {
+        printf("Failed to load music. \n");
+    }
+
+    if(!LoadMusic(audio, "wind1.wav", &ambient, musicBus)) {
+        printf("Failed to load ambient.\n");
     }
 
     PlaySound(audio, &music, musicBus);
+    PlaySound(audio, &ambient, ambientBus);
+    SoundPool laserSFX;
+    if(!InitializeSoundPool(audio, "laser4.wav", 4, &laserSFX, sfxBus)){
+        printf("Failed to load laser.\n");
+    }
+
     while(!glfwWindowShouldClose(window)) {
         ArenaReset(&memory.transient);
 
@@ -413,11 +427,12 @@ void PlatformRunGameLoop(PlatformAPI *api,
             frame.input.controllers[0] = newInput->controllers[0];
         }
 
-        if(frame.input.controllers[0].leftShoulder.endedDown) {
-            StopSound(&music);
+        if(WasPressed(frame.input.controllers[0].actionDown)) {
+            //StopSound(&music);
+            SoundPoolPlay(&laserSFX, 0.2f);
         }
         if(frame.input.controllers[0].actionUp.endedDown) {
-            PlaySound(audio, &music, musicBus);
+            //PlaySound(audio, &music, musicBus);
         }
 
         glfwGetFramebufferSize(window, &renderer->width, &renderer->height);
@@ -437,6 +452,7 @@ void PlatformRunGameLoop(PlatformAPI *api,
     }
 
     StopSound(&music);
+    StopSound(&ambient);
     DestroyAudio(audio);
     glfwTerminate();
 }

@@ -17,9 +17,9 @@ void DestroyAudio(PlatformAudio *audio) {
     audio->initialized = false;
 }
 
-AudioBus CreateAudioBus(PlatformAudio *audio) {
+AudioBus CreateAudioBus(PlatformAudio *audio, float volume) {
     int b = audio->busCount++;
-    audio->busVolume[b] = 1.0f;
+    audio->busVolume[b] = volume;
     audio->busMuted[b] = false;
     return b;
 }
@@ -44,7 +44,7 @@ bool LoadMusic(PlatformAudio* audio, const char* path, ma_sound* out, AudioBus b
 
 void PlaySound(PlatformAudio *audio, ma_sound *sound, AudioBus bus) {
     //float v = Audio_GetEffectiveVolume(audio, bus, baseVol);
-    ma_sound_set_volume(sound, 0.2f);
+    ma_sound_set_volume(sound, audio->busVolume[bus]);
     ma_sound_start(sound);
 }
 
@@ -62,4 +62,47 @@ void FadeInSound(PlatformAudio *audio, ma_sound *sound, AudioBus bus, float ms) 
 
 void FadeOutSound(ma_sound *sound, float ms) {
     ma_sound_stop_with_fade_in_milliseconds(sound, ms);
+}
+
+bool InitializeSoundPool(PlatformAudio* audio, const char* path, int count, SoundPool* soundPool, AudioBus bus) { 
+
+    if (count > MAX_POOL_INSTANCES) count = MAX_POOL_INSTANCES;
+
+    soundPool->count = count;
+    soundPool->bus = bus;
+    soundPool->engine = audio;
+
+    for (int i = 0; i < count; i++) {
+        if (ma_sound_init_from_file(&audio->engine, path,
+                                    MA_SOUND_FLAG_DECODE,
+                                    NULL, NULL,
+                                    &soundPool->instances[i]) != MA_SUCCESS) {
+            return false;
+        }
+    }
+
+    soundPool->running = true;
+    //ma_thread_init(NULL, SoundPool_Thread, pool, &pool->thread);
+
+    return true;
+}
+
+void SoundPoolPlay(SoundPool *pool, float volume) {
+        for (int i = 0; i < pool->count; i++) {
+        if (!pool->used[i]) {
+            pool->used[i] = true;
+
+            //float v = Audio_GetEffectiveVolume(pool->engine, pool->bus, pool->baseVolume * vol);
+            ma_sound_set_volume(&pool->instances[i], 0.2f);
+
+            ma_sound_start(&pool->instances[i]);
+            return;
+        }
+    }
+
+    // fallback: steal instance 0
+    pool->used[0] = true;
+    //float v = Audio_GetEffectiveVolume(pool->engine, pool->bus, pool->baseVolume * vol);
+    ma_sound_set_volume(&pool->instances[0], 0.2f);
+    ma_sound_start(&pool->instances[0]);
 }

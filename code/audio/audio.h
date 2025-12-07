@@ -2,7 +2,7 @@
 #include "miniaudio.h"
 
 #define MAX_AUDIO_BUSES 8
-#define MAX_POOL_INSTANCES 8
+#define MAX_POOL_INSTANCES 4
 
 typedef int AudioBus;
 
@@ -16,6 +16,7 @@ typedef struct {
 
 typedef struct {
     ma_sound instances[MAX_POOL_INSTANCES];
+    AudioBus bus;
     bool used[MAX_POOL_INSTANCES];
     int count;
 
@@ -24,10 +25,11 @@ typedef struct {
     PlatformAudio *engine;
 } SoundPool;
 
+// PlatformAudio
 bool InitializeAudio(PlatformAudio *audio);
 void DestroyAudio(PlatformAudio *audio);
 
-AudioBus CreateAudioBus(PlatformAudio *audio);
+AudioBus CreateAudioBus(PlatformAudio *audio, float volume);
 void SetAudioBusVolume(PlatformAudio* audio, AudioBus bus, float volume);
 void SetAudioBusMuted(PlatformAudio* audio, AudioBus bus, bool muted);
 
@@ -38,3 +40,6 @@ void StopSound(ma_sound* sound);
 
 void FadeInSound(PlatformAudio* audio, ma_sound* sound, AudioBus bus, float ms);
 void FadeOutSound(ma_sound* sound, float ms);
+
+bool InitializeSoundPool(PlatformAudio* audio, const char* path, int count, SoundPool* soundPool, AudioBus bus);
+void SoundPoolPlay(SoundPool* pool, float volume);
