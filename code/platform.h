@@ -1,5 +1,6 @@
 #pragma once
 
+#include "audio/audio.h"
 #include "defs.h"
 #include "font.h"
 #include "memory.h"
@@ -260,6 +261,6 @@ struct PlatformAPI {
     void (*Log)(const char* msg);
 };
 
-void PlatformInit(PlatformRenderer* renderer, const char* vertexShaderText, const char* fragementShaderText);
-void PlatformRunGameLoop(PlatformAPI* api, PlatformRenderer *renderer, const char* vertexShaderText, const char* fragementShaderText);
+void PlatformInit(PlatformRenderer* renderer, PlatformAudio* audio, PlatformMemory* memory);
+void PlatformRunGameLoop(PlatformAPI* api, PlatformRenderer *renderer, PlatformAudio *audio, const char* vertexShaderText, const char* fragementShaderText);
 void PlatformRender(PlatformRenderer *renderer, void* buffer, size_t size, LightSystem* system);

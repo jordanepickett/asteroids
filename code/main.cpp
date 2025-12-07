@@ -4,10 +4,13 @@
 #define GLFW_INCLUDE_NONE
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
+#define MINIAUDIO_IMPLEMENTATION
+#include "miniaudio.h"
 
 int main() {
     PlatformAPI platform = {0};
     PlatformRenderer renderer = {0};
+    PlatformAudio audio = {0};
     //PlatformInit(&renderer, vertexShaderText, fragmentShaderText);
-    PlatformRunGameLoop(&platform, &renderer, vertexShaderText, fragmentShaderText);
+    PlatformRunGameLoop(&platform, &renderer, &audio, vertexShaderText, fragmentShaderText);
 }

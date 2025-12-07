@@ -1,3 +1,4 @@
+#include "audio/audio.h"
 #include "defs.h"
 #include "systems.h"
 #include "text_shader.cpp"
@@ -50,7 +51,7 @@ static float ApplyDeadzone(float value, float deadzone) {
     return adjusted * sign;
 }
 
-void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
+void PlatformInit(PlatformRenderer *renderer, PlatformAudio* audio, PlatformMemory* memory) {
 
     if(!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
         // Error handling
@@ -226,6 +227,13 @@ void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, renderer->pingPongTexture[i], 0);
 	}
 
+    
+    if(InitializeAudio(audio)) {
+        printf("Audio Initalized. \n");
+    } else {
+        printf("Audio Not Initialized. \n");
+    }
+
     {
         // Load font title font
         Font font;
@@ -263,6 +271,7 @@ void PlatformInit(PlatformRenderer *renderer, PlatformMemory* memory) {
 
 void PlatformRunGameLoop(PlatformAPI *api,
                          PlatformRenderer *renderer,
+                         PlatformAudio *audio,
                          const char* vertexShaderText, 
                          const char* fragmentShaderText
                          ) {
@@ -298,7 +307,7 @@ void PlatformRunGameLoop(PlatformAPI *api,
     ArenaInit(&memory.transient, transMem, TRANS_SIZE);
 
 
-    PlatformInit(renderer, &memory);
+    PlatformInit(renderer, audio, &memory);
     GameState* game = (GameState*)ArenaAlloc(&memory.permanent, sizeof(GameState));
     GameInit(game, api, &memory);
 
@@ -309,6 +318,15 @@ void PlatformRunGameLoop(PlatformAPI *api,
     GameInput *newInput = &input[0];
     GameInput *oldInput = &input[1];
 
+    // Sound test
+    AudioBus musicBus = CreateAudioBus(audio);
+    ma_sound music;
+
+    if (!LoadMusic(audio, "song18.mp3", &music, musicBus)) {
+        printf("Failed to load music\n");
+    }
+
+    PlaySound(audio, &music, musicBus);
     while(!glfwWindowShouldClose(window)) {
         ArenaReset(&memory.transient);
 
@@ -411,6 +429,8 @@ void PlatformRunGameLoop(PlatformAPI *api,
         glfwPollEvents();
     }
 
+    StopSound(&music);
+    DestroyAudio(audio);
     glfwTerminate();
 }
 

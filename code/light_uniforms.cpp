@@ -10,7 +10,6 @@ void LightUniformsInit(Program* program) {
     {
         snprintf(buf, sizeof(buf), "lights[%d].position", i);
         program->lightUniforms[i][LU_POSITION] = glGetUniformLocation(program->program, buf);
-        printf("%i\n", program->lightUniforms[i][LU_POSITION]);
 
         snprintf(buf, sizeof(buf), "lights[%d].color", i);
         program->lightUniforms[i][LU_COLOR] = glGetUniformLocation(program->program, buf);

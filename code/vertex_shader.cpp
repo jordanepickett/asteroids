@@ -1,7 +1,6 @@
 #include "platform.h"
 #include "light_uniforms.h"
 #include <GLFW/glfw3.h>
-#include <cstdio>
 #include <glm/gtc/type_ptr.hpp>
 
 static void VertexShaderInit(PlatformRenderer* renderer, Program* program, const char* textVertexShader, const char* textFragmentShader) {

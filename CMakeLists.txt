@@ -7,7 +7,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE INTERNAL "")
 
 # Collect all source files from code/
 # file(GLOB_RECURSE SOURCES code/*.cpp)
-file(GLOB_RECURSE SOURCES code/*.cpp code/*/*.cpp)
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS code/*.cpp code/*/*.cpp)
 
 add_executable(asteroids ${SOURCES})
 
@@ -35,5 +35,6 @@ target_link_libraries(asteroids PRIVATE
     glad
     glfw
     opengl32       # Windows OpenGL
+    winmm
 )
 
