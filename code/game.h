@@ -40,6 +40,10 @@ struct Camera {
 typedef struct {
     void* commands;
     int renderCommandsCount;
+
+    void* soundCommands;
+    int soundCommandsCount;
+
     Entity *entities;
     int *freeEntitiesList;
     int freeEntityCount;
@@ -67,6 +71,7 @@ typedef struct {
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory);
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory);
 void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame);
+void GameSound(GameState *state, PlatformMemory *memory);
 Entity* CreateEntity(GameState *state, EntityType entity);
 void DestoryEntity(Entity* entity);
 void HandleCollision(GameState *state);

@@ -248,6 +248,7 @@ struct PlatformRenderer {
 struct PlatformMemory {
     MemoryArena permanent;
     MemoryArena transient;
+    MemoryArena sound;
 };
 
 struct PlatformFrame {

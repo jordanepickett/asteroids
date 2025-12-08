@@ -1,3 +1,5 @@
+#include "audio/audio.h"
+#include "memory.h"
 #include <cstdint>
 
 enum AudioCommandType {
@@ -6,7 +8,7 @@ enum AudioCommandType {
     AUDIO_CMD_STOP,
     AUDIO_CMD_FADE_IN,
     AUDIO_CMD_FADE_OUT,
-    AUDIO_CMD_PLAY_MUSIC,
+    AUDIO_CMD_PLAY_STREAM,
 };
 
 enum AudioSound {
@@ -25,3 +27,13 @@ struct AudioCommandPlay {
     AudioSound soundId;
     float volume;
 };
+
+struct AudioCommandSetVolume {
+    AudioCommandHeader header;
+    AudioBus bus;
+    float volume;
+};
+
+void PushAudioPlay(MemoryArena* memory, AudioSound soundId, float volume); 
+void PushAudioPlayStream(MemoryArena* memory, AudioSound soundId, float volume); 
+void PushAudioSetVolume(MemoryArena* memory, AudioBus bus, float volume);

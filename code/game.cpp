@@ -1,6 +1,7 @@
 #include "defs.h"
 #include "entity.h"
 #include "game.h"
+#include "audio/audio_commands.h"
 #include "memory.h"
 #include "queues.h"
 #include "queues.cpp"
@@ -386,6 +387,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
         1,
         1
     );
+
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -540,3 +542,15 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
     state->renderCommandsCount = memory->transient.used;
 }
 
+void GameSound(GameState *state, PlatformMemory *memory) {
+    ArenaReset(&memory->sound);
+    static int test = 0;
+    if(test == 0) {
+        PushAudioPlayStream(&memory->sound, TITLE_MUSIC, 0.2f);
+        PushAudioPlayStream(&memory->sound, AMBIENT_WIND, 0.2f);
+    }
+    test = 1;
+
+    state->soundCommands = memory->sound.base;
+    state->soundCommandsCount = memory->sound.used;
+}

@@ -1,4 +1,5 @@
 #include "audio/audio.h"
+#include "audio/platform_audio.cpp"
 #include "input.cpp"
 #include "defs.h"
 #include "systems.h"
@@ -297,16 +298,18 @@ void PlatformRunGameLoop(PlatformAPI *api,
     glfwSwapInterval(1);
 
 
-    const size_t PERM_SIZE = 64 * 1024 * 1024;
+    const size_t PERM_SIZE = 32 * 1024 * 1024;
     const size_t TRANS_SIZE = 64 * 1024;
+    const size_t SOUND_SIZE = 64;
     
     void* permMem = malloc(PERM_SIZE);
     void* transMem = malloc(TRANS_SIZE);
+    void* soundMem = malloc(SOUND_SIZE);
 
     PlatformMemory memory = {};
     ArenaInit(&memory.permanent, permMem, PERM_SIZE);
     ArenaInit(&memory.transient, transMem, TRANS_SIZE);
-
+    ArenaInit(&memory.sound, soundMem, SOUND_SIZE);
 
     PlatformInit(renderer, audio, &memory);
     GameState* game = (GameState*)ArenaAlloc(&memory.permanent, sizeof(GameState));
@@ -321,8 +324,9 @@ void PlatformRunGameLoop(PlatformAPI *api,
 
     // Sound test
     AudioBus musicBus = CreateAudioBus(audio, 0.1f);
-    AudioBus ambientBus = CreateAudioBus(audio, 0.3f);
+    AudioBus ambientBus = CreateAudioBus(audio, 0.5f);
     AudioBus sfxBus = CreateAudioBus(audio, 0.3f);
+    SoundLibrary soundLibrary = {0};
     ma_sound music;
     ma_sound ambient;
 
@@ -334,12 +338,20 @@ void PlatformRunGameLoop(PlatformAPI *api,
         printf("Failed to load ambient.\n");
     }
 
-    PlaySound(audio, &music, musicBus);
-    PlaySound(audio, &ambient, ambientBus);
+    //PlaySound(audio, &music, musicBus);
+    //PlaySound(audio, &ambient, ambientBus);
     SoundPool laserSFX;
     if(!InitializeSoundPool(audio, "laser4.wav", 4, &laserSFX, sfxBus)){
         printf("Failed to load laser.\n");
     }
+
+    soundLibrary.titleMusic = &music;
+    soundLibrary.ambientWind = &ambient;
+    soundLibrary.laser = &laserSFX;
+
+    soundLibrary.musicBus = &musicBus;
+    soundLibrary.ambientBus = &ambientBus;
+    soundLibrary.sfxBus = &sfxBus;
 
     while(!glfwWindowShouldClose(window)) {
         ArenaReset(&memory.transient);
@@ -437,10 +449,13 @@ void PlatformRunGameLoop(PlatformAPI *api,
         glfwGetFramebufferSize(window, &renderer->width, &renderer->height);
         renderer->ratio = renderer->width / (float) renderer->height;
 
+        // Game Updates
         GameUpdate(game, &frame, &memory);
         GameRender(game, &memory, &frame);
+        GameSound(game, &memory);
 
         PlatformRender(renderer, game->commands, game->renderCommandsCount, game->light);
+        PlatformAudioPlay(audio, &soundLibrary, game->soundCommands, game->soundCommandsCount);
 
         GameInput *temp = newInput;
         newInput = oldInput;

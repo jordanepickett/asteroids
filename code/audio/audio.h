@@ -25,6 +25,16 @@ typedef struct {
     PlatformAudio *engine;
 } SoundPool;
 
+typedef struct {
+    ma_sound* titleMusic;
+    ma_sound* ambientWind;
+    SoundPool* laser;
+
+    AudioBus* musicBus;
+    AudioBus* ambientBus;
+    AudioBus* sfxBus;
+} SoundLibrary;
+
 // PlatformAudio
 bool InitializeAudio(PlatformAudio *audio);
 void DestroyAudio(PlatformAudio *audio);
