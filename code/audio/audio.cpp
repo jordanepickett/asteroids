@@ -88,7 +88,11 @@ bool InitializeSoundPool(PlatformAudio* audio, const char* path, int count, Soun
 }
 
 void SoundPoolPlay(SoundPool *pool, float volume) {
-        for (int i = 0; i < pool->count; i++) {
+    for (int i = 0; i < pool->count; i++) {
+        if(pool->used[i] && ma_sound_at_end(&pool->instances[i])) {
+            pool->used[i] = false;
+        }
+
         if (!pool->used[i]) {
             pool->used[i] = true;
 

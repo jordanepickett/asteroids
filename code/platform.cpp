@@ -428,7 +428,6 @@ void PlatformRunGameLoop(PlatformAPI *api,
         }
 
         if(WasPressed(frame.input.controllers[0].actionDown)) {
-            //StopSound(&music);
             SoundPoolPlay(&laserSFX, 0.2f);
         }
         if(frame.input.controllers[0].actionUp.endedDown) {
