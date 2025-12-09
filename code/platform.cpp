@@ -298,8 +298,8 @@ void PlatformRunGameLoop(PlatformAPI *api,
     glfwSwapInterval(1);
 
 
-    const size_t PERM_SIZE = 32 * 1024 * 1024;
-    const size_t TRANS_SIZE = 64 * 1024;
+    const size_t PERM_SIZE = 256 * 1024;
+    const size_t TRANS_SIZE = 8 * 1024;
     const size_t SOUND_SIZE = 64;
     
     void* permMem = malloc(PERM_SIZE);

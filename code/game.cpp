@@ -531,11 +531,27 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
         PushParticleBatch(cameraMvp, &memory->transient, verts, vertexCount);
     }
 
-    // TODO: Text
-    PushTextf(state, &memory->transient, {10, 20}, {1,1,1,1}, TOP_LEFT, "FPS: %f", (1.0f / frame->deltaTime));
-    size_t size_in_bytes = sizeof(&frame);
-    double size_in_kb = (size_in_bytes) / 1024.0;
-    PushTextf(state, &memory->transient, {500, 20}, {1,1,1,1}, TOP_RIGHT, "Size: %f", size_in_bytes);
+    {
+        // TODO: Text
+        PushTextf(state, &memory->transient, {10, 20}, {1,1,1,1}, TOP_LEFT, "FPS: %f", (1.0f / frame->deltaTime));
+        //size_t size_in_bytes = sizeof(memory->permanent.used);
+        size_t sizeInBytes = memory->permanent.used;
+        double sizeInKB = (sizeInBytes) / 1024.0;
+        double sizeInMB = (sizeInKB) / 1024.0;
+        PushTextf(state, &memory->transient, {300, 20}, {1,1,1,1}, TOP_RIGHT, "perm size: %.2f", sizeInKB);
+    }
+    {
+        size_t sizeInBytes = memory->transient.used;
+        double sizeInKB = (sizeInBytes) / 1024.0;
+        double sizeInMB = (sizeInKB) / 1024.0;
+        PushTextf(state, &memory->transient, {150, 20}, {1,1,1,1}, TOP_RIGHT, "trans size: %.2f", sizeInKB);
+    }
+    {
+        size_t sizeInBytes = memory->sound.used;
+        double sizeInKB = (sizeInBytes) / 1024.0;
+        double sizeInMB = (sizeInKB) / 1024.0;
+        PushTextf(state, &memory->transient, {150, 20}, {1,1,1,1}, BOTTOM_LEFT, "sound size: %f", sizeInKB);
+    }
 
 
     state->commands = memory->transient.base;
