@@ -279,6 +279,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     // Queues
     state->collisions = (CollisionQueue*)ArenaAlloc(&memory->permanent, sizeof(CollisionQueue));
     state->projectile = (ProjectileQueue*)ArenaAlloc(&memory->permanent, sizeof(ProjectileQueue));
+    state->events = (EventQueue*)ArenaAlloc(&memory->permanent, sizeof(EventQueue));
 
 
     // Systems 0
@@ -301,6 +302,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     // Queues 0
     memset(state->collisions, 0, sizeof(CollisionQueue));
     memset(state->projectile, 0, sizeof(ProjectileQueue));
+    memset(state->events, 0, sizeof(EventQueue));
 
     //EntityRegistryInit(state->entitiesReg);
     //LifetimeSystemInit(state->lifetime);
@@ -356,6 +358,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
 
     EntityID emitter = CreateEntity2(state);
     AddMovement(state, emitter, {-10, 0}, {0, 1}, {10, 0});
+    /*
     AddEmitter(
         state,
         emitter,
@@ -387,6 +390,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
         1,
         1
     );
+    */
 
 }
 
@@ -408,6 +412,7 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
     // Inputs
     PlayerInputUpdate(state, frame);
     FireMissleUpdate(state, frame);
+
     // Queue processors
     ProcessProjectileFire(state);
 
@@ -419,6 +424,8 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
     CollisionUpdate(state, state->collisions);
     ProcessCollisions(state);
 
+
+    ProcessEvents(state);
     UpdateParticles(state->particles, frame->deltaTime);
 
     if(state->camera.isLocked) {
@@ -455,7 +462,7 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
     }
 
     for(int i = 0; i < state->entitiesReg->count; i++) {
-        if((state->entitiesReg->comp[i] & (COMP_RENDER | COMP_MOVEMENT))) {
+        if((state->entitiesReg->comp[i] & (COMP_RENDER))) {
 
             glm::vec2 pos = {0,0};
             glm::vec2 rot = {0,1};

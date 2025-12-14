@@ -66,6 +66,7 @@ typedef struct {
     CollisionSystem *collision;
     EmitterSystem *emitter;
     ParticleSystem *particles;
+    EventQueue *events;
 } GameState;
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory);

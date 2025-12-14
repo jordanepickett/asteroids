@@ -1,7 +1,6 @@
 #include "defs.h"
 #include "systems.h"
 #include <cassert>
-#include <cstdio>
 
 void CreateParticle(ParticleSystem *system,
                     glm::vec2 pos, 
