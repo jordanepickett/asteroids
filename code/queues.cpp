@@ -49,6 +49,7 @@ static void ProcessProjectileFire(GameState *state) {
         AddRender(state, projectile, MISSLE, 4);
         AddLifeTimeSystem(state, projectile, lifeTime);
         AddCollision(state, projectile, 1.0f);
+        AddEvent(state, EVENT_ENTITY_ATTACK, origin, originPos, originRot);
     }
 
     // Reset the queue!!
@@ -109,24 +110,53 @@ static void ProcessEmitterEvents(
     glm::vec2 position,
     glm::vec2 direction
 ) {
-    EntityID emitter = CreateEntity2(state);
-    AddMovement(state, emitter, { -position.x, position.y }, {0, 1}, direction);
-    AddEmitter(
-        state,
-        emitter,
-        position,
-        {0, 0},
-        {5, 5},
-        25,
-        0,
-        0.5,
-        {1, 1, 0, 1},
-        {1, 0, 0, 1},
-        1,
-        1
-    );
-    AddLifeTimeSystem(state, emitter, 0.5f);
+    switch(type) {
+     case EVENT_ENTITY_DEATH: {
+            EntityID emitter = CreateEntity2(state);
+            AddMovement(state, emitter, { -position.x, position.y }, {0, 1}, direction);
+            AddEmitter(
+                state,
+                emitter,
+                position,
+                {0, 0},
+                {5, 5},
+                25,
+                0,
+                0.5,
+                {1, 1, 0, 1},
+                {1, 0, 0, 1},
+                1,
+                1
+            );
+            AddLifeTimeSystem(state, emitter, 0.5f);
 
+        } break;
+        default: {
+            break;
+        }
+
+    }
+
+}
+
+static void AddSoundEvent(GameState* state, EventType type, EntityID entityId) {
+    SoundSystem* sound = state->sound;
+    if(sound->count > 5) {
+        return;
+    }
+    switch(type) {
+        case EVENT_ENTITY_DEATH: {
+
+        } break;
+        case EVENT_ENTITY_ATTACK: {
+            sound->count++;
+            sound->type[sound->count] = EVENT_ENTITY_ATTACK;
+            sound->entity[sound->count] = entityId;
+            sound->variant[sound->count] = 0;
+            default: {
+            } break;
+        }
+    }
 }
 
 static void ProcessEvents(GameState *state) {
@@ -134,15 +164,16 @@ static void ProcessEvents(GameState *state) {
     assert(queue->count < 50);
 
     for(int i = 0; i < queue->count; i++) {
-        printf("Event Type: %i\n", queue->events[i].type);
         // Call Processors for emitters/sound
         ProcessEmitterEvents(
             state,
-            EVENT_ENTITY_DEATH,
+            queue->events[i].type,
             queue->events[i].entityId,
             queue->events[i].position,
             queue->events[i].direction
         );
+
+        AddSoundEvent(state, queue->events[i].type, queue->events[i].entityId);
     }
 
     // Reset the queue!!

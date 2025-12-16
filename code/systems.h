@@ -1,11 +1,20 @@
 #pragma once
 #include "defs.h"
 #include "components.h"
+#include "queues.h"
 #include "render_commands.h"
 #include "tags.h"
 #include "entity.h"
 #include <glm/glm.hpp>
 #include <glad/glad.h>
+
+typedef struct {
+    EventType type[5];
+    int variant [5];
+    EntityID entity[5];
+    int count;
+    unsigned char present[5];
+} SoundSystem;
 
 typedef struct {
     float lifetime[MAX_ENTITIES];

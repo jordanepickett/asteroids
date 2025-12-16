@@ -12,9 +12,9 @@ enum AudioCommandType {
 };
 
 enum AudioSound {
-    TITLE_MUSIC,
-    AMBIENT_WIND,
-    LASER
+    SOUND_TITLE_MUSIC,
+    SOUND_AMBIENT_WIND,
+    SOUND_LASER
 };
 
 struct AudioCommandHeader {

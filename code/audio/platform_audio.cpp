@@ -13,21 +13,28 @@ static void PlatformAudioPlay(PlatformAudio* audio, SoundLibrary* soundLibrary, 
             case AUDIO_CMD_PLAY_STREAM: {
                 auto* c = (AudioCommandPlay*)ptr;
                 switch(c->soundId) {
-                    case TITLE_MUSIC: {
+                    case SOUND_TITLE_MUSIC: {
                         PlaySound(audio, soundLibrary->titleMusic, *soundLibrary->musicBus);
                     } break;
-                    case AMBIENT_WIND: {
+                    case SOUND_AMBIENT_WIND: {
                         PlaySound(audio, soundLibrary->ambientWind, *soundLibrary->ambientBus);
                     } break;
-                    case LASER: {
-
+                    default: {
                     } break;
                 }
-                printf("%i\n", c->soundId);
             } break;
-            default: {
-                break;
+            case AUDIO_CMD_PLAY: {
+                auto* c = (AudioCommandPlay*)ptr;
+                switch(c->soundId) {
+                    case SOUND_LASER: {
+                        SoundPoolPlay(soundLibrary->laser, 0.2f);
+                    }
+                    default: {
+                    } break;
+                }
             }
+            default: {
+            } break;
         }
 
         ptr += header->size; // move to next command

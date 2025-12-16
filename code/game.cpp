@@ -275,6 +275,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     state->lifetime = (LifeTimeSystem*)ArenaAlloc(&memory->permanent, sizeof(LifeTimeSystem));
     state->floatable = (FloatableSystem*)ArenaAlloc(&memory->permanent, sizeof(FloatableSystem));
     state->collision = (CollisionSystem*)ArenaAlloc(&memory->permanent, sizeof(CollisionSystem));
+    state->sound = (SoundSystem*)ArenaAlloc(&memory->permanent, sizeof(SoundSystem));
 
     // Queues
     state->collisions = (CollisionQueue*)ArenaAlloc(&memory->permanent, sizeof(CollisionQueue));
@@ -298,6 +299,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     memset(state->lifetime, 0, sizeof(LifeTimeSystem));
     memset(state->floatable, 0, sizeof(FloatableSystem));
     memset(state->collision, 0, sizeof(CollisionSystem));
+    memset(state->sound, 0, sizeof(SoundSystem));
 
     // Queues 0
     memset(state->collisions, 0, sizeof(CollisionQueue));
@@ -567,12 +569,19 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
 
 void GameSound(GameState *state, PlatformMemory *memory) {
     ArenaReset(&memory->sound);
+    SoundSystem* sound = state->sound;
     static int test = 0;
     if(test == 0) {
-        PushAudioPlayStream(&memory->sound, TITLE_MUSIC, 0.2f);
-        PushAudioPlayStream(&memory->sound, AMBIENT_WIND, 0.2f);
+        PushAudioPlayStream(&memory->sound, SOUND_TITLE_MUSIC, 0.2f);
+        PushAudioPlayStream(&memory->sound, SOUND_AMBIENT_WIND, 0.2f);
     }
     test = 1;
+
+    for(int i = 0; i < sound->count; i++) {
+        PushAudioPlay(&memory->sound, SOUND_LASER, 0.2f);
+    }
+
+    sound->count = 0;
 
     state->soundCommands = memory->sound.base;
     state->soundCommandsCount = memory->sound.used;

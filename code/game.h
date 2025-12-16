@@ -66,6 +66,7 @@ typedef struct {
     CollisionSystem *collision;
     EmitterSystem *emitter;
     ParticleSystem *particles;
+    SoundSystem *sound;
     EventQueue *events;
 } GameState;
 
