@@ -134,9 +134,6 @@ static void AddEmitter(
         system->parentEntity[id] = parentEntity;   // Optional entity to follow
     }
     system->present[id] = 1;
-    printf("index: %i\n", id);
-    printf("r: %f, g: %f, b: %f\n", endColor.r, endColor.g, endColor.b);
-    printf("r: %f, g: %f, b: %f\n", system->endColor[id].r, system->endColor[id].g, system->endColor[id].b);
     state->entitiesReg->comp[id] |= COMP_EMITTER;
 }
 

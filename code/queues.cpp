@@ -146,17 +146,22 @@ static void AddSoundEvent(GameState* state, EventType type, EntityID entityId) {
     }
     switch(type) {
         case EVENT_ENTITY_DEATH: {
-
+            if(state->entitiesReg->comp[entityId] & COMP_FLOATABLE) {
+                printf("here\n");
+                sound->type[sound->count] = EVENT_ENTITY_DEATH;
+                sound->entity[sound->count] = entityId;
+                sound->variant[sound->count] = 0;
+            }
         } break;
         case EVENT_ENTITY_ATTACK: {
-            sound->count++;
             sound->type[sound->count] = EVENT_ENTITY_ATTACK;
             sound->entity[sound->count] = entityId;
             sound->variant[sound->count] = 0;
-            default: {
-            } break;
         }
+        default: {
+        } break;
     }
+    sound->count++;
 }
 
 static void ProcessEvents(GameState *state) {

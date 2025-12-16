@@ -578,7 +578,14 @@ void GameSound(GameState *state, PlatformMemory *memory) {
     test = 1;
 
     for(int i = 0; i < sound->count; i++) {
-        PushAudioPlay(&memory->sound, SOUND_LASER, 0.2f);
+        // TODO: Use a table
+        //printf("Sound Type: %i\n", sound->type[i]);
+        if(sound->type[i] == EVENT_ENTITY_ATTACK) {
+            PushAudioPlay(&memory->sound, SOUND_LASER, 0.2f);
+        }
+        if(sound->type[i] == EVENT_ENTITY_DEATH) {
+            PushAudioPlay(&memory->sound, SOUND_EXPLOSION, 0.2f);
+        }
     }
 
     sound->count = 0;

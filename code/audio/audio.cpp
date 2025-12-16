@@ -97,7 +97,7 @@ void SoundPoolPlay(SoundPool *pool, float volume) {
             pool->used[i] = true;
 
             //float v = Audio_GetEffectiveVolume(pool->engine, pool->bus, pool->baseVolume * vol);
-            ma_sound_set_volume(&pool->instances[i], 0.2f);
+            ma_sound_set_volume(&pool->instances[i], volume);
 
             ma_sound_start(&pool->instances[i]);
             return;
@@ -107,6 +107,6 @@ void SoundPoolPlay(SoundPool *pool, float volume) {
     // fallback: steal instance 0
     pool->used[0] = true;
     //float v = Audio_GetEffectiveVolume(pool->engine, pool->bus, pool->baseVolume * vol);
-    ma_sound_set_volume(&pool->instances[0], 0.2f);
+    ma_sound_set_volume(&pool->instances[0], volume);
     ma_sound_start(&pool->instances[0]);
 }

@@ -300,7 +300,7 @@ void PlatformRunGameLoop(PlatformAPI *api,
 
     const size_t PERM_SIZE = 256 * 1024;
     const size_t TRANS_SIZE = 32 * 1024;
-    const size_t SOUND_SIZE = 64;
+    const size_t SOUND_SIZE = 128;
     
     void* permMem = malloc(PERM_SIZE);
     void* transMem = malloc(TRANS_SIZE);
@@ -344,10 +344,15 @@ void PlatformRunGameLoop(PlatformAPI *api,
     if(!InitializeSoundPool(audio, "laser4.wav", 4, &laserSFX, sfxBus)){
         printf("Failed to load laser.\n");
     }
+    SoundPool explosionSFX;
+    if(!InitializeSoundPool(audio, "explosion.wav", 4, &explosionSFX, sfxBus)){
+        printf("Failed to load explosion.\n");
+    }
 
     soundLibrary.titleMusic = &music;
     soundLibrary.ambientWind = &ambient;
     soundLibrary.laser = &laserSFX;
+    soundLibrary.explosion = &explosionSFX;
 
     soundLibrary.musicBus = &musicBus;
     soundLibrary.ambientBus = &ambientBus;

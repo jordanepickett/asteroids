@@ -25,10 +25,14 @@ static void PlatformAudioPlay(PlatformAudio* audio, SoundLibrary* soundLibrary, 
             } break;
             case AUDIO_CMD_PLAY: {
                 auto* c = (AudioCommandPlay*)ptr;
+                printf("Sound ID: %i\n", c->soundId);
                 switch(c->soundId) {
                     case SOUND_LASER: {
                         SoundPoolPlay(soundLibrary->laser, 0.2f);
-                    }
+                    } break;
+                    case SOUND_EXPLOSION: {
+                        SoundPoolPlay(soundLibrary->explosion, 0.05f);
+                    } break;
                     default: {
                     } break;
                 }

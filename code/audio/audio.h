@@ -29,6 +29,7 @@ typedef struct {
     ma_sound* titleMusic;
     ma_sound* ambientWind;
     SoundPool* laser;
+    SoundPool* explosion;
 
     AudioBus* musicBus;
     AudioBus* ambientBus;
