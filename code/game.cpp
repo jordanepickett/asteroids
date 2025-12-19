@@ -1,6 +1,8 @@
 #include "defs.h"
 #include "entity.h"
 #include "game.h"
+#include "scenes/scene_start.h"
+#include "scenes/scene_game.h"
 #include "audio/audio_commands.h"
 #include "memory.h"
 #include "queues.h"
@@ -145,58 +147,6 @@ inline void PushLoop2(
     memcpy(dst, verts, vertexCount * sizeof(Vertex));
 }
 
-inline void PushTrianges(
-    GameState *state,
-    MemoryArena *memory,
-    Vertex *verts,
-    int vertexCount,
-    Entity* entity
-) {
-
-    glm::mat4 mvp = state->camera.projection * state->camera.view;
-    size_t size = sizeof(RenderCommandDrawTriangles) + vertexCount * sizeof(Vertex); // assuming simple 2D verts
-    auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
-    drawCmd->header.type = RENDER_CMD_DRAW_TRIANGLES;
-    drawCmd->header.size = (uint32_t)size;
-    drawCmd->mvp = mvp;
-    drawCmd->vertexCount = vertexCount;
-    drawCmd->pos = entity->transform.position;
-    void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
-    memcpy(dst, verts, vertexCount * sizeof(Vertex));
-}
-
-inline void PushLoop(
-    GameState *state,
-    MemoryArena *memory,
-    Vertex *verts,
-    int vertexCount,
-    Entity* entity
-) {
-
-    glm::mat4 mvp = state->camera.projection * state->camera.view;
-    size_t size = sizeof(RenderCommandDrawTriangles) + vertexCount * sizeof(Vertex); // assuming simple 2D verts
-    auto* drawCmd = (RenderCommandDrawTriangles*)ArenaAlloc(memory, size);
-    drawCmd->header.type = RENDER_CMD_DRAW_LOOP;
-    drawCmd->header.size = (uint32_t)size;
-    drawCmd->pos = entity->transform.position;
-    drawCmd->mvp = mvp;
-    drawCmd->vertexCount = vertexCount;
-    drawCmd->rotation = entity->transform.rotation;
-    void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandDrawTriangles);
-    memcpy(dst, verts, 4 * sizeof(Vertex));
-}
-
-inline void UpdateCamera(GameState *state, Entity *entity) {
-    if(!state->camera.isLocked) {
-        state->camera.position = glm::vec3(-entity->transform.position.x, entity->transform.position.y, 1.0f);
-        state->camera.view = glm::lookAt(
-            state->camera.position,             // eye
-            glm::vec3(-entity->transform.position.x, entity->transform.position.y, 0.0f),        // target
-            glm::vec3(0.0f, 1.0f, 0.0f)         // up
-        );
-    }
-}
-
 inline void WrapSystem(GameState* state) {
     float left   = -20.0f;
     float right  =  20.0f;
@@ -257,6 +207,31 @@ void DestoryEntity(Entity *entity) {
     entity->isActive = false;
 }
 
+void ClearGameSystems(GameState *state) {
+    // Systems 0
+    memset(state->entitiesReg, 0, sizeof(EntityRegistry));
+    memset(state->emitter, 0, sizeof(EmitterSystem));
+    memset(state->particles, 0, sizeof(ParticleSystem));
+    memset(state->render, 0, sizeof(RenderSystem));
+    memset(state->light, 0, sizeof(LightSystem));
+    memset(state->textSystem, 0, sizeof(TextSystem));
+    memset(state->movement, 0, sizeof(MovementSystem));
+    memset(state->health, 0, sizeof(HealthSystem));
+    memset(state->damage, 0, sizeof(DamageSystem));
+    memset(state->cameraSys, 0, sizeof(CameraSystem));
+    memset(state->playerInput, 0, sizeof(PlayerInputSystem));
+    memset(state->fireMissile, 0, sizeof(FireMissleSystem));
+    memset(state->lifetime, 0, sizeof(LifeTimeSystem));
+    memset(state->floatable, 0, sizeof(FloatableSystem));
+    memset(state->collision, 0, sizeof(CollisionSystem));
+    memset(state->sound, 0, sizeof(SoundSystem));
+
+    // Queues 0
+    memset(state->collisions, 0, sizeof(CollisionQueue));
+    memset(state->projectile, 0, sizeof(ProjectileQueue));
+    memset(state->events, 0, sizeof(EventQueue));
+}
+
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     
     // Systems
@@ -282,29 +257,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     state->projectile = (ProjectileQueue*)ArenaAlloc(&memory->permanent, sizeof(ProjectileQueue));
     state->events = (EventQueue*)ArenaAlloc(&memory->permanent, sizeof(EventQueue));
 
-
-    // Systems 0
-    memset(state->entitiesReg, 0, sizeof(EntityRegistry));
-    memset(state->emitter, 0, sizeof(EmitterSystem));
-    memset(state->particles, 0, sizeof(ParticleSystem));
-    memset(state->render, 0, sizeof(RenderSystem));
-    memset(state->light, 0, sizeof(LightSystem));
-    memset(state->textSystem, 0, sizeof(TextSystem));
-    memset(state->movement, 0, sizeof(MovementSystem));
-    memset(state->health, 0, sizeof(HealthSystem));
-    memset(state->damage, 0, sizeof(DamageSystem));
-    memset(state->cameraSys, 0, sizeof(CameraSystem));
-    memset(state->playerInput, 0, sizeof(PlayerInputSystem));
-    memset(state->fireMissile, 0, sizeof(FireMissleSystem));
-    memset(state->lifetime, 0, sizeof(LifeTimeSystem));
-    memset(state->floatable, 0, sizeof(FloatableSystem));
-    memset(state->collision, 0, sizeof(CollisionSystem));
-    memset(state->sound, 0, sizeof(SoundSystem));
-
-    // Queues 0
-    memset(state->collisions, 0, sizeof(CollisionQueue));
-    memset(state->projectile, 0, sizeof(ProjectileQueue));
-    memset(state->events, 0, sizeof(EventQueue));
+    ClearGameSystems(state);
 
     //EntityRegistryInit(state->entitiesReg);
     //LifetimeSystemInit(state->lifetime);
@@ -316,94 +269,29 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     //RenderQueueInit(g->render);
     //CollisionQueueInit(state->collisions);
 
-    //TODO move to scenes
-    EntityID player = CreateEntity2(state);
-    AddTag(state, player, TAG_PLAYER);
-    glm::vec2 zero = { 0, 0};
-    glm::vec2 rot = { 0, 1};
-    AddMovement(state, player, zero, rot, zero);
-    AddHealth(state, player, 3.0f);
-    AddRender(state, player, SHIP, 3);
-    AddPlayerInput(state, player);
-    AddFireMissleSystem(state, player);
-    AddCollision(state, player, 1.0f);
+    SceneStack sceneStack = {};
+    sceneStack.scenes[sceneStack.count] = &SceneStart;
+    sceneStack.count++;
+    //sceneStack.scenes[sceneStack.count] = &SceneGame;
+    //sceneStack.count++;
+    state->sceneStack = sceneStack;
 
-    EntityID camera = CreateEntity2(state);
-    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 1.0f);
-    glm::mat4 lookAt = glm::lookAt(
-        cameraPos,
-        glm::vec3(0.0f, 0.0f, 0.0f),        // target
-        glm::vec3(0.0f, 1.0f, 0.0f)         // up
-    );
-    AddCamera(state, camera, lookAt, cameraPos, true, true);
-
-    EntityID healthText = CreateEntity2(state);
-    AddText(
-        state,
-        healthText,
-        {10, 20},
-        {1,0,1,1},
-        BOTTOM_LEFT,
-        player,
-        FIELD_HEALTH
-    );
-
-    EntityID light = CreateEntity2(state);
-    AddLight(state, light, {1, 1}, {1, 0, 0}, 15.0f, 50.0f);
-    AddMovement(state, light, {1, 0}, {0, 1}, {0, 0});
-    AddRender(state, light, MISSLE, 4);
-
-    EntityID light2= CreateEntity2(state);
-    AddLight(state, light2, {15, 15}, {0, 0, 1}, 15.0f, 50.0f);
-    AddMovement(state, light2, {15, 15}, {0, 1}, {0, 0});
-    AddRender(state, light2, MISSLE, 4);
-
-    EntityID emitter = CreateEntity2(state);
-    AddMovement(state, emitter, {-10, 0}, {0, 1}, {10, 0});
-    /*
-    AddEmitter(
-        state,
-        emitter,
-        {-10, 0},
-        {0, 0},
-        {5, 5},
-        25,
-        0,
-        0.5,
-        {1, 1, 0, 1},
-        {1, 0, 0, 1},
-        1,
-        1
-    );
-
-    EntityID emitter2 = CreateEntity2(state);
-    AddMovement(state, emitter2, {10, 0}, {0, 1}, {-10, 0});
-    AddEmitter(
-        state,
-        emitter2,
-        {-10, 0},
-        {0, 0},
-        {5, 5},
-        25,
-        0,
-        0.5,
-        {1, 0.3, 0, 1},
-        {1, 0, 0, 1},
-        1,
-        1
-    );
-    */
-
+    sceneStack.scenes[0]->onEnter(state);
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
 
+    /*
     asteroidSpawnTimer -= frame->deltaTime;
     if (asteroidSpawnTimer <= 0.0f) {
         TrySpawnAsteroid(state);
         asteroidSpawnTimer = 3.0f; // spawn every ~3 seconds
     }
-
+    */
+    
+    for(int i = 0; i < state->sceneStack.count; i++) {
+        state->sceneStack.scenes[i]->update(state, frame, memory);
+    }
     UpdateEntities(state, frame);
     //GameRender(state, memory, frame);
 }
@@ -430,9 +318,9 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
     ProcessEvents(state);
     UpdateParticles(state->particles, frame->deltaTime);
 
-    if(state->camera.isLocked) {
+    //if(state->camera.isLocked) {
         WrapSystem(state);
-    }
+    //}
 
     // Cleanup
     CleanupDeadEntities(state);

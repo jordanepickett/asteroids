@@ -2,6 +2,7 @@
 #include "entity.h"
 #include "platform.h"
 #include "queues.h"
+#include "scenes/scene.h"
 #include "systems.h"
 #include <glm/glm.hpp>
 #include <glad/glad.h>
@@ -30,6 +31,11 @@ static Vertex ASTEROID[8] = {
     {{ -1.0f, -0.2f }, {1.f, 1.f, 1.f, 1.0f}, {0.f, 0.f, 1.f}}
 };
 
+typedef struct {
+    Scene* scenes[2];
+    int count;
+} SceneStack;
+
 struct Camera {
     glm::mat4 projection;
     glm::mat4 view;
@@ -37,7 +43,8 @@ struct Camera {
     bool isLocked;
 };
 
-typedef struct {
+typedef struct GameState {
+    SceneStack sceneStack;
     void* commands;
     int renderCommandsCount;
 
@@ -47,7 +54,6 @@ typedef struct {
     Entity *entities;
     int *freeEntitiesList;
     int freeEntityCount;
-    Camera camera;
 
     EntityRegistry *entitiesReg;
     LightSystem *light;
@@ -79,3 +85,4 @@ void DestoryEntity(Entity* entity);
 void HandleCollision(GameState *state);
 void UpdateEntities(GameState* state, PlatformFrame *frame);
 void PlayerInput(GameState* state, PlatformFrame *frame, Entity* entity);
+void ClearGameSystems(GameState* state);
