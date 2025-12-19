@@ -345,7 +345,7 @@ void PlatformRunGameLoop(PlatformAPI *api,
         printf("Failed to load laser.\n");
     }
     SoundPool explosionSFX;
-    if(!InitializeSoundPool(audio, "explosion.wav", 4, &explosionSFX, sfxBus)){
+    if(!InitializeSoundPool(audio, "explosion.wav", 16, &explosionSFX, sfxBus)){
         printf("Failed to load explosion.\n");
     }
 

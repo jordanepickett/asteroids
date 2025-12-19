@@ -73,6 +73,7 @@ bool InitializeSoundPool(PlatformAudio* audio, const char* path, int count, Soun
     soundPool->engine = audio;
 
     for (int i = 0; i < count; i++) {
+        soundPool->used[i] = false;
         if (ma_sound_init_from_file(&audio->engine, path,
                                     MA_SOUND_FLAG_DECODE,
                                     NULL, NULL,
@@ -97,6 +98,7 @@ void SoundPoolPlay(SoundPool *pool, float volume) {
             pool->used[i] = true;
 
             //float v = Audio_GetEffectiveVolume(pool->engine, pool->bus, pool->baseVolume * vol);
+            ma_sound_seek_to_pcm_frame(&pool->instances[i], 0);
             ma_sound_set_volume(&pool->instances[i], volume);
 
             ma_sound_start(&pool->instances[i]);

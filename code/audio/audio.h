@@ -2,7 +2,7 @@
 #include "miniaudio.h"
 
 #define MAX_AUDIO_BUSES 8
-#define MAX_POOL_INSTANCES 4
+#define MAX_POOL_INSTANCES 16
 
 typedef int AudioBus;
 

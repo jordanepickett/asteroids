@@ -16,10 +16,57 @@ Scene SceneGame = {
     onExit,
 };
 
+float asteroidSpawnTimer = 0.0f;
+
+static int CountAsteroids(GameState* state) {
+    int count = 0;
+    for(int i = 0; i < state->entitiesReg->count; i++) {
+        if(state->entitiesReg->comp[i] & COMP_FLOATABLE) {
+            count++;
+        }
+    }
+    return count;
+}
+
+static void TrySpawnAsteroid(GameState* state) {
+    int amount = CountAsteroids(state);
+    //printf("AMOUNT: %i \n", amount);
+    if (amount >= MAX_FLOATABLES) return;
+
+    while(amount < MAX_FLOATABLES) {
+        EntityID a = CreateEntity2(state);
+        if (a) {
+            // random position at edges of screen
+            float x = (rand() % 2 == 0) ? 0.0f : 640;
+            float y = (float)(rand() % 480);
+            glm::vec2 pos = { x, y };
+
+            // random velocity (pick a random direction + speed)
+            float angle = (float)rand() / RAND_MAX * 2.0f * 3.14159f;
+            float speed = 5.0f + (rand() % 5); // 50–150 px/sec
+            float velX = cosf(angle) * speed;
+            float velY  = sinf(angle) * speed;
+            glm::vec2 vel = { velX, velY };
+            glm::vec2 rot = glm::normalize(vel);
+            AddMovement(state, a, pos, rot, vel);
+            AddTag(state, a, TAG_ASTEROID);
+            AddDamage(state, a, 1.0f, TAG_MISSLE);
+            AddRender(state, a, ASTEROID, 8);
+            AddFloatable(state, a);
+            AddCollision(state, a, 0.5f);
+
+            //a->radius = 20.0f + (rand() % 15); // random asteroid size
+        }
+        amount++;
+    }
+
+}
+
 // ---- Implementation ----
 
 static void onEnter(GameState* state) {
     printf("[Game] Enter\n");
+    asteroidSpawnTimer = 0;
     EntityID player = CreateEntity2(state);
     AddTag(state, player, TAG_PLAYER);
     glm::vec2 zero = { 0, 0};
@@ -111,10 +158,9 @@ static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memor
         state->sceneStack.scenes[0] = &SceneStart;
         state->sceneStack.scenes[0]->onEnter(state);
     }
-    // Input polling, menu selection, etc
-    /*
-    if (StartButtonPressed()) {
-        SetScene(state, &Scene_Game);
+    asteroidSpawnTimer -= frame->deltaTime;
+    if (asteroidSpawnTimer <= 0.0f) {
+        TrySpawnAsteroid(state);
+        asteroidSpawnTimer = 3.0f; // spawn every ~3 seconds
     }
-    */
 }

@@ -48,7 +48,9 @@ static EntityID CreateEntity2(GameState* state) {
     EntityID id;
     if (state->entitiesReg->freeCount > 0) {
         id = state->entitiesReg->freeList[--state->entitiesReg->freeCount];
+#ifdef DEBUG
         printf("Old Entity Slot found: %i\n", id);
+#endif
     } else {
         assert(state->entitiesReg->count < MAX_ENTITIES);
         id = state->entitiesReg->count++;
@@ -58,7 +60,9 @@ static EntityID CreateEntity2(GameState* state) {
     state->entitiesReg->active[id] = 1;
     state->entitiesReg->comp[id] = COMP_NONE;
     state->entitiesReg->tag[id] = TAG_NONE;
+#ifdef DEBUG
     printf("Creating Entity with ID: %i\n", id);
+#endif
     return id;
 }
 
@@ -82,7 +86,9 @@ static void AddCamera(
     bool isLocked,
     bool isActive
 ) {
+#ifdef DEBUG
     printf("Adding Camera to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     CameraSystem *system = state->cameraSys;
 
@@ -116,7 +122,9 @@ static void AddEmitter(
     float startSize,
     float endSize,
     EntityID parentEntity = -1) {
+#ifdef DEBUG
     printf("Adding Emitter to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_EMITTERS);
     EmitterSystem *system = state->emitter;
 
@@ -146,7 +154,9 @@ static void AddText(
     EntityID source,
     FieldType fieldType
 ) {
+#ifdef DEBUG
     printf("Adding Text to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     TextSystem *system = state->textSystem;
     system->pos[id] = pos;
@@ -166,7 +176,9 @@ static void AddLight(GameState *state,
                      float intesity,
                      EntityID source = -1
                      ) {
+#ifdef DEBUG
     printf("Adding Light to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     LightSystem *system = state->light;
     system->pos[id] = pos;
@@ -179,7 +191,9 @@ static void AddLight(GameState *state,
 }
 
 static void AddCollision(GameState *state, EntityID id, float size) {
+#ifdef DEBUG
     printf("Adding Collision to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     CollisionSystem *system = state->collision;
     system->size[id] = size;
@@ -188,7 +202,9 @@ static void AddCollision(GameState *state, EntityID id, float size) {
 }
 
 static void AddRender(GameState *state, EntityID id, Vertex *verts, int vertCount) {
+#ifdef DEBUG
     printf("Adding Render to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     RenderSystem *system = state->render;
     system->verts[id] = verts;
@@ -198,7 +214,9 @@ static void AddRender(GameState *state, EntityID id, Vertex *verts, int vertCoun
 }
 
 static void AddHealth(GameState *state, EntityID id, float hp) {
+#ifdef DEBUG
     printf("Adding Health to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     HealthSystem *system = state->health;
     system->currentHP[id] = hp;
@@ -208,7 +226,9 @@ static void AddHealth(GameState *state, EntityID id, float hp) {
 }
 
 static void AddDamage(GameState *state, EntityID id, float amount, TagMask canHit) {
+#ifdef DEBUG
     printf("Adding Damage to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     DamageSystem *system = state->damage;
     system->tags[id] = canHit;
@@ -224,7 +244,9 @@ static void AddMovement(
     glm::vec2 rot,
     glm::vec2 vel
 ) {
+#ifdef DEBUG
     printf("Adding Movement to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     MovementSystem *m = state->movement;
     m->pos[id] = pos;
@@ -235,7 +257,9 @@ static void AddMovement(
 }
 
 static void AddFireMissleSystem(GameState *state, EntityID id) {
+#ifdef DEBUG
     printf("Adding Fire Missle to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     FireMissleSystem *system = state->fireMissile;
     //system->offset[idx] = offset;
@@ -244,7 +268,9 @@ static void AddFireMissleSystem(GameState *state, EntityID id) {
 }
 
 static void AddLifeTimeSystem(GameState *state, EntityID id, float lifeTime) {
+#ifdef DEBUG
     printf("Adding Lifetime to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     LifeTimeSystem *system = state->lifetime;
     system->lifetime[id] = lifeTime;
@@ -253,7 +279,9 @@ static void AddLifeTimeSystem(GameState *state, EntityID id, float lifeTime) {
 }
 
 static void AddPlayerInput(GameState *state, EntityID id) {
+#ifdef DEBUG
     printf("Adding Player Input to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     PlayerInputSystem *system = state->playerInput;
     system->present[id] = 1;
@@ -262,7 +290,9 @@ static void AddPlayerInput(GameState *state, EntityID id) {
 
 
 static void AddFloatable(GameState *state, EntityID id) {
+#ifdef DEBUG
     printf("Adding Floatable to: %i\n", id);
+#endif
     assert(id >= 0 && id < MAX_ENTITIES);
     FloatableSystem *system = state->floatable;
     //system->offset[idx] = offset;
@@ -485,7 +515,9 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
 static void CleanupDeadEntities(GameState *state) {
     for(int i = 0; i < state->entitiesReg->deleteCount; i++) {
         EntityID entity = state->entitiesReg->toDelete[i];
+#ifdef DEBUG
         printf("Entity to delete from systems: %i\n", entity);
+#endif
         if(entity != -1) {
 
             state->entitiesReg->freeList[state->entitiesReg->freeCount++] = entity;

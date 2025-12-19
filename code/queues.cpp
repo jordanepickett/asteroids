@@ -141,13 +141,11 @@ static void ProcessEmitterEvents(
 
 static void AddSoundEvent(GameState* state, EventType type, EntityID entityId) {
     SoundSystem* sound = state->sound;
-    if(sound->count > 5) {
-        return;
-    }
+    assert(sound->count < 5);
+
     switch(type) {
         case EVENT_ENTITY_DEATH: {
             if(state->entitiesReg->comp[entityId] & COMP_FLOATABLE) {
-                printf("here\n");
                 sound->type[sound->count] = EVENT_ENTITY_DEATH;
                 sound->entity[sound->count] = entityId;
                 sound->variant[sound->count] = 0;
