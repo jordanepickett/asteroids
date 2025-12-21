@@ -1,7 +1,5 @@
 #include <stdio.h>
-#include "scene_start.h"
 #include "game.h"
-#include "scene_game.h"
 #include "queues.cpp"
 #include "platform.h"
 #include "scenes/scene.h"
@@ -13,8 +11,8 @@ static void onEnter(GameState* state);
 static void onExit(GameState* state);
 
 // Static scene definition
-Scene SceneStart = {
-    SCENE_START,
+Scene ScenePause = {
+    SCENE_PAUSE,
     SYS_INPUT | SYS_UI | SYS_RENDER,
     true,
     true,
@@ -26,27 +24,17 @@ Scene SceneStart = {
 // ---- Implementation ----
 
 static void onEnter(GameState* state) {
-    printf("[Start] Enter\n");
-    EntityID camera = CreateEntity2(state);
-    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 1.0f);
-    glm::mat4 lookAt = glm::lookAt(
-        cameraPos,
-        glm::vec3(0.0f, 0.0f, 0.0f),        // target
-        glm::vec3(0.0f, 1.0f, 0.0f)         // up
-    );
-    AddCamera(state, camera, lookAt, cameraPos, true, true);
+    printf("[Pause] Enter\n");
 }
 
 static void onExit(GameState* state) {
-    ClearGameSystems(state);
-    printf("[Start] Exit\n");
+    printf("[Pause] Exit\n");
 }
 
 static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memory) {
-    if (WasPressed(frame->input.controllers[0].actionDown)) {
-        printf("[Start] next scene.\n");
+    if (WasPressed(frame->input.controllers[0].actionRight)) {
+        printf("[Pause] back scene.\n");
         SceneStackPop(state);
-        SceneStackPush(state, &SceneGame);
     }
     // Input polling, menu selection, etc
     /*

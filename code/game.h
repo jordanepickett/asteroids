@@ -4,6 +4,7 @@
 #include "queues.h"
 #include "scenes/scene.h"
 #include "systems.h"
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 
@@ -51,10 +52,6 @@ typedef struct GameState {
     void* soundCommands;
     int soundCommandsCount;
 
-    Entity *entities;
-    int *freeEntitiesList;
-    int freeEntityCount;
-
     EntityRegistry *entitiesReg;
     LightSystem *light;
     TextSystem *textSystem;
@@ -83,6 +80,6 @@ void GameSound(GameState *state, PlatformMemory *memory);
 Entity* CreateEntity(GameState *state, EntityType entity);
 void DestoryEntity(Entity* entity);
 void HandleCollision(GameState *state);
-void UpdateEntities(GameState* state, PlatformFrame *frame);
+void UpdateEntities(GameState* state, PlatformFrame *frame, uint32_t activeSystems);
 void PlayerInput(GameState* state, PlatformFrame *frame, Entity* entity);
 void ClearGameSystems(GameState* state);

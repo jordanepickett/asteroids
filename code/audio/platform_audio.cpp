@@ -30,7 +30,6 @@ static void PlatformAudioPlay(PlatformAudio* audio, SoundLibrary* soundLibrary, 
                         SoundPoolPlay(soundLibrary->laser, 0.2f);
                     } break;
                     case SOUND_EXPLOSION: {
-                        printf("EXPLOSION\n");
                         SoundPoolPlay(soundLibrary->explosion, 0.05f);
                     } break;
                     default: {

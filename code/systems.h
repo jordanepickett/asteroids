@@ -8,6 +8,16 @@
 #include <glm/glm.hpp>
 #include <glad/glad.h>
 
+enum {
+    SYS_INPUT   = 1 << 0,
+    SYS_MOVE    = 1 << 1,
+    SYS_PHYSICS = 1 << 2,
+    SYS_AI      = 1 << 3,
+    SYS_RENDER  = 1 << 4,
+    SYS_UI      = 1 << 5,
+    SYS_PARTICLES      = 1 << 6,
+};
+
 typedef struct {
     EventType type[5];
     int variant [5];

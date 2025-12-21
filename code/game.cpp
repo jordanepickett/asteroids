@@ -137,26 +137,6 @@ inline void WrapEntityPosition(Entity *entity) {
     else if (entity->transform.position.y < bottom) entity->transform.position.y = top;
 }
 
-Entity* CreateEntity(GameState* state, EntityType entityType) {
-    for(int i = 0; i < MAX_ENTITIES; i++) {
-        if(!state->entities[i].isActive) {
-            Entity* e = &state->entities[i];
-            *e = {};
-            e->isActive = true;
-            e->type = entityType;
-            e->transform = {
-                glm::vec2(0.0f, 0.0f),
-                glm::vec2(0.0f, 1.0f),
-                glm::vec2(1.0f, 1.0f),
-                glm::vec2(0.0f, 0.0f)
-            };
-            return e;
-        }
-    }
-
-    return nullptr;
-}
-
 void DestoryEntity(Entity *entity) {
     entity->isActive = false;
 }
@@ -242,19 +222,31 @@ void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) 
         asteroidSpawnTimer = 3.0f; // spawn every ~3 seconds
     }
     */
-    
-    UpdateEntities(state, frame);
-    for(int i = 0; i < state->sceneStack.count; i++) {
-        state->sceneStack.scenes[i]->update(state, frame, memory);
-    }
+    uint32_t activeSystems = 0;
+
+    SceneStack* stack = &state->sceneStack;
+
+    for (int i = stack->count - 1; i >= 0; i--) {
+        Scene* s = stack->scenes[i];
+        activeSystems |= s->systemMask;
+        //s->update(state, frame, memory);
+
+        if (s->blocksUpdate)
+            break;
+    } 
+
+    UpdateEntities(state, frame, activeSystems);
+    state->sceneStack.scenes[stack->count - 1]->update(state, frame, memory);
     //GameRender(state, memory, frame);
 }
 
-void UpdateEntities(GameState *state, PlatformFrame *frame) {
+void UpdateEntities(GameState *state, PlatformFrame *frame, uint32_t activeSystems) {
     //printf("entity count: %i\n", state->entitiesReg->count);
 
     // Inputs
-    PlayerInputUpdate(state, frame);
+    if(activeSystems & SYS_INPUT) {
+        PlayerInputUpdate(state, frame);
+    }
     FireMissleUpdate(state, frame);
 
     // Queue processors
@@ -262,8 +254,10 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
 
     // Systems
     EmitterUpdate(state, frame->deltaTime);
-    MovementUpdate(state, frame);
-    LifeTimeUpdate(state, frame);
+    if(activeSystems & SYS_MOVE) {
+        MovementUpdate(state, frame);
+        LifeTimeUpdate(state, frame);
+    }
 
     CollisionUpdate(state, state->collisions);
     ProcessCollisions(state);
@@ -281,7 +275,8 @@ void UpdateEntities(GameState *state, PlatformFrame *frame) {
 
 }
 
-void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) {
+static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFrame* frame, uint32_t renderSystems) {
+
     ArenaReset(&memory->transient);
 
     // Clear
@@ -296,6 +291,7 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
     TextSystem *textSystem = state->textSystem;
     HealthSystem *healthSystem = state->health;
 
+
     glm::mat4 cameraMvp;
     for(int i = 0; i < state->entitiesReg->count; i++) {
         if((state->entitiesReg->comp[i] & (COMP_CAMERA))) {
@@ -305,81 +301,86 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
         }
     }
 
-    for(int i = 0; i < state->entitiesReg->count; i++) {
-        if((state->entitiesReg->comp[i] & (COMP_RENDER))) {
+    if(renderSystems & SYS_RENDER) {
+        for(int i = 0; i < state->entitiesReg->count; i++) {
+            if((state->entitiesReg->comp[i] & (COMP_RENDER))) {
 
-            glm::vec2 pos = {0,0};
-            glm::vec2 rot = {0,1};
-            pos = movementSystem->pos[i];
-            rot = movementSystem->rot[i];
-            int count = renderSystem->vertCount[i];
-            Vertex *verts = renderSystem->verts[i];
-            //if(i == 5) {
-            //    for(int j = 0; j < renderSystem->vertCount[i]; j++) {
-            //        Vertex *vert = &verts[j];
-            //        vert->color = {1,1,1,0.8};
-            //    }
-            //}
+                glm::vec2 pos = {0,0};
+                glm::vec2 rot = {0,1};
+                pos = movementSystem->pos[i];
+                rot = movementSystem->rot[i];
+                int count = renderSystem->vertCount[i];
+                Vertex *verts = renderSystem->verts[i];
+                //if(i == 5) {
+                //    for(int j = 0; j < renderSystem->vertCount[i]; j++) {
+                //        Vertex *vert = &verts[j];
+                //        vert->color = {1,1,1,0.8};
+                //    }
+                //}
 
-            if(count == 3) {
-                PushTrianges2(cameraMvp, &memory->transient, verts, count, pos, rot);
-            } else {
-                PushLoop2(cameraMvp, &memory->transient, verts, count, pos, rot);
+                if(count == 3) {
+                    PushTrianges2(cameraMvp, &memory->transient, verts, count, pos, rot);
+                } else {
+                    PushLoop2(cameraMvp, &memory->transient, verts, count, pos, rot);
+                }
             }
-        }
 
-        if((state->entitiesReg->comp[i] & (COMP_TEXT))) {
-            glm::vec2 pos = textSystem->pos[i];
-            glm::vec4 color = textSystem->color[i];
-            Anchor anchor = textSystem->anchor[i];
-            FieldType field = textSystem->fieldType[i];
-            EntityID source = textSystem->source[i];
-            switch (field) {
-                case FIELD_HEALTH:
-                    if(state->entitiesReg->comp[source] & COMP_HEALTH) {
-                        float hp = healthSystem->currentHP[source];
-                        PushTextf(
-                            state,
-                            &memory->transient,
-                            pos,
-                            color,
-                            anchor,
-                            "HEALTH: %i",
-                            (int)hp
-                        );
-                    }
-                    break;
-                case FIELD_SPEED:
-                    if(state->entitiesReg->comp[i] & COMP_HEALTH) {
-                        PushTextf(
-                            state,
-                            &memory->transient,
-                            pos,
-                            color,
-                            anchor,
-                            "HEALTH: %f",
-                            100.0f
-                        );
-                    }
-                    break;
+            if((state->entitiesReg->comp[i] & (COMP_TEXT))) {
+                glm::vec2 pos = textSystem->pos[i];
+                glm::vec4 color = textSystem->color[i];
+                Anchor anchor = textSystem->anchor[i];
+                FieldType field = textSystem->fieldType[i];
+                EntityID source = textSystem->source[i];
+                switch (field) {
+                    case FIELD_HEALTH:
+                        if(state->entitiesReg->comp[source] & COMP_HEALTH) {
+                            float hp = healthSystem->currentHP[source];
+                            PushTextf(
+                                state,
+                                &memory->transient,
+                                pos,
+                                color,
+                                anchor,
+                                "HEALTH: %i",
+                                (int)hp
+                            );
+                        }
+                        break;
+                    case FIELD_SPEED:
+                        if(state->entitiesReg->comp[i] & COMP_HEALTH) {
+                            PushTextf(
+                                state,
+                                &memory->transient,
+                                pos,
+                                color,
+                                anchor,
+                                "HEALTH: %f",
+                                100.0f
+                            );
+                        }
+                        break;
+                }
             }
         }
     }
 
-    int vertexCount = 0;
-    static ParticleVertex verts[MAX_PARTICLES];
-    for(int i = 0; i < state->particles->count; i++) {
-        if(!state->particles->active[i]) {
-            continue;
-        }
-        glm::vec2 pos = state->particles->pos[i];
-        glm::vec4 color = state->particles->color[i];
-        verts[vertexCount] = { pos, color };
-        vertexCount++;
-    }
 
-    if(vertexCount > 0) {
-        PushParticleBatch(cameraMvp, &memory->transient, verts, vertexCount);
+    if(renderSystems & SYS_PARTICLES) {
+        int vertexCount = 0;
+        static ParticleVertex verts[MAX_PARTICLES];
+        for(int i = 0; i < state->particles->count; i++) {
+            if(!state->particles->active[i]) {
+                continue;
+            }
+            glm::vec2 pos = state->particles->pos[i];
+            glm::vec4 color = state->particles->color[i];
+            verts[vertexCount] = { pos, color };
+            vertexCount++;
+        }
+
+        if(vertexCount > 0) {
+            PushParticleBatch(cameraMvp, &memory->transient, verts, vertexCount);
+        }
     }
 
     {
@@ -408,6 +409,23 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
     state->commands = memory->transient.base;
     state->renderCommandsCount = memory->transient.used;
 }
+
+void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) {
+    uint32_t renderSystems = 0;
+    SceneStack* stack = &state->sceneStack;
+
+    for (int i = stack->count - 1; i >= 0; i--) {
+        Scene* s = stack->scenes[i];
+        renderSystems |= s->systemMask;
+
+        if (s->blocksRender) {
+            break;
+        }
+    }
+
+    RenderEntities(state, memory, frame, renderSystems);
+}
+
 
 void GameSound(GameState *state, PlatformMemory *memory) {
     ArenaReset(&memory->sound);

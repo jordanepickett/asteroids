@@ -1,5 +1,6 @@
 #pragma once
 #include "platform.h"
+#include <cstdint>
 typedef struct GameState GameState;
 
 enum SceneType {
@@ -11,7 +12,14 @@ enum SceneType {
 
 typedef struct {
     SceneType type;
+    uint32_t systemMask;
+    bool blocksUpdate;
+    bool blocksRender;
     void (*update)(GameState* state, PlatformFrame* frame, PlatformMemory* memory);
     void (*onEnter)(GameState* state);
     void (*onExit)(GameState* state);
 } Scene;
+
+void SceneStackPush(GameState* state, Scene* scene);
+void SceneStackPop(GameState* state);
+Scene* SceneStackTop(GameState* state);

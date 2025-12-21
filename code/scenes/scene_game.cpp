@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include "queues.cpp"
 #include "platform.h"
+#include "scenes/scene.h"
 #include "scenes/scene_start.h"
+#include "scenes/scene_pause.h"
+#include "systems.h"
 
 // Forward declarations (file-local)
 static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memory);
@@ -11,6 +14,9 @@ static void onExit(GameState* state);
 // Static scene definition
 Scene SceneGame = {
     SCENE_GAME,
+    SYS_INPUT | SYS_UI | SYS_MOVE | SYS_RENDER | SYS_PARTICLES,
+    true,
+    true,
     update,
     onEnter,
     onExit,
@@ -39,7 +45,7 @@ static void TrySpawnAsteroid(GameState* state) {
             // random position at edges of screen
             float x = (rand() % 2 == 0) ? 0.0f : 640;
             float y = (float)(rand() % 480);
-            glm::vec2 pos = { x, y };
+            glm::vec2 pos = { x + amount, y };
 
             // random velocity (pick a random direction + speed)
             float angle = (float)rand() / RAND_MAX * 2.0f * 3.14159f;
@@ -154,9 +160,12 @@ static void onExit(GameState* state) {
 static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memory) {
     if (WasPressed(frame->input.controllers[0].actionRight)) {
         printf("[Game] next scene.\n");
-        onExit(state);
-        state->sceneStack.scenes[0] = &SceneStart;
-        state->sceneStack.scenes[0]->onEnter(state);
+        SceneStackPop(state);
+        SceneStackPush(state, &SceneStart);
+    }
+    if (WasPressed(frame->input.controllers[0].actionUp)) {
+        printf("[Game] pause.\n");
+        SceneStackPush(state, &ScenePause);
     }
     asteroidSpawnTimer -= frame->deltaTime;
     if (asteroidSpawnTimer <= 0.0f) {

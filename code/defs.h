@@ -3,14 +3,22 @@
 #include <cstdint>
 
 typedef int32_t EntityID;
+// Scenes
+#define MAX_SCENES 4
+
+// Entities
 #define INVALID_ENTITY_ID (-1)
 #define MAX_ENTITIES 64
 
+
+// Components
 #define MAX_FLOATABLES 15
 #define MAX_EMITTERS 64
 #define MAX_PARTICLES 2000
 #define MAX_LIFETIMES 15
 
+
+// Lights
 #define MAX_LIGHTS 16
 #define LIGHT_UNIFORM_COUNT 4
 
