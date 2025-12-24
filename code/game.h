@@ -71,6 +71,8 @@ typedef struct GameState {
     ParticleSystem *particles;
     SoundSystem *sound;
     EventQueue *events;
+
+    ButtonSystem *buttons;
 } GameState;
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory);

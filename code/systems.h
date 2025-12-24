@@ -7,6 +7,7 @@
 #include "entity.h"
 #include <glm/glm.hpp>
 #include <glad/glad.h>
+#include <string>
 
 enum {
     SYS_INPUT   = 1 << 0,
@@ -45,6 +46,12 @@ typedef struct {
     FieldType fieldType[20];
     unsigned char present[20];
 } TextSystem;
+
+typedef struct {
+    bool isSelectable[20];
+    bool isSelected[20];
+    unsigned char present[20];
+} ButtonSystem;
 
 typedef struct {
     glm::vec2 pos[MAX_PARTICLES];

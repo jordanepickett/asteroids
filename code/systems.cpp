@@ -145,6 +145,22 @@ static void AddEmitter(
     state->entitiesReg->comp[id] |= COMP_EMITTER;
 }
 
+static void AddButton(
+    GameState *state,
+    EntityID id,
+    bool isSelected,
+    bool isSelectable
+) {
+#ifdef DEBUG
+    printf("Adding UI to: %i\n", id);
+#endif
+    assert(id >= 0 && id < MAX_ENTITIES);
+    ButtonSystem *system = state->buttons;
+    system->isSelected[id] = isSelected;
+    system->isSelectable[id] = isSelectable;
+    state->entitiesReg->comp[id] |= COMP_BUTTON;
+}
+
 static void AddText(
     GameState *state,
     EntityID id,

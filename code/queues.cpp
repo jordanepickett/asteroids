@@ -1,27 +1,10 @@
-
+#include "game/entities/entities.h"
 #include "defs.h"
 #include "systems.cpp"
 #include "queues.h"
 #include "game.h"
 #include "systems.h"
 #include <cassert>
-#include <cstdio>
-
-static void AddEvent(GameState* state,
-                     EventType eventType,
-                     EntityID entityId,
-                     glm::vec2 position,
-                     glm::vec2 direction) {
-
-    EventQueue* queue = state->events;
-
-    queue->events[queue->count].type = eventType;
-    queue->events[queue->count].entityId = entityId;
-    queue->events[queue->count].position = position;
-    queue->events[queue->count].direction = direction;
-    queue->events[queue->count].variant = 0;
-    queue->count++;
-}
 
 static void CollisionQueueInit(CollisionQueue *q) { q->count = 0; }
 
@@ -49,29 +32,11 @@ static void ProcessProjectileFire(GameState *state) {
         AddRender(state, projectile, MISSLE, 4);
         AddLifeTimeSystem(state, projectile, lifeTime);
         AddCollision(state, projectile, 1.0f);
-        AddEvent(state, EVENT_ENTITY_ATTACK, origin, originPos, originRot);
+        AddEntityEvent(state, EVENT_ENTITY_ATTACK, origin, originPos, originRot);
     }
 
     // Reset the queue!!
     queue->count = 0;
-}
-
-inline void CheckAndDeleteEntity(GameState *state, EntityID id) {
-
-    bool isEntityQueued = false;
-    for(int i = 0; i < state->entitiesReg->deleteCount; i++) {
-        if (id == state->entitiesReg->toDelete[i]) {
-            isEntityQueued = true;
-        }
-    }
-    if(!isEntityQueued) {
-        printf("Queued To Die: %i\n", id);
-        state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = id;
-        if(state->entitiesReg->comp[id] & COMP_MOVEMENT) {
-            MovementSystem* system = state->movement;
-            AddEvent(state, EVENT_ENTITY_DEATH, id, system->pos[id], { 0, 0 });
-        }
-    }
 }
 
 static void ProcessCollisions(GameState *state) {

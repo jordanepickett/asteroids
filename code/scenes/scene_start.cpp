@@ -1,8 +1,8 @@
 #include <stdio.h>
+#include "queues.cpp"
 #include "scene_start.h"
 #include "game.h"
 #include "scene_game.h"
-#include "queues.cpp"
 #include "platform.h"
 #include "scenes/scene.h"
 #include "systems.h"
@@ -35,6 +35,18 @@ static void onEnter(GameState* state) {
         glm::vec3(0.0f, 1.0f, 0.0f)         // up
     );
     AddCamera(state, camera, lookAt, cameraPos, true, true);
+
+    EntityID start = CreateEntity2(state);
+    AddButton(state, start, false, false);
+    AddText(
+        state,
+        start,
+        {10, 20},
+        {1,0,1,1},
+        CENTER,
+        start,
+        FIELD_UI
+    );
 }
 
 static void onExit(GameState* state) {

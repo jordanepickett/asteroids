@@ -164,6 +164,9 @@ void ClearGameSystems(GameState *state) {
     memset(state->collisions, 0, sizeof(CollisionQueue));
     memset(state->projectile, 0, sizeof(ProjectileQueue));
     memset(state->events, 0, sizeof(EventQueue));
+    
+
+    memset(state->buttons, 0, sizeof(ButtonSystem));
 }
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
@@ -185,6 +188,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     state->floatable = (FloatableSystem*)ArenaAlloc(&memory->permanent, sizeof(FloatableSystem));
     state->collision = (CollisionSystem*)ArenaAlloc(&memory->permanent, sizeof(CollisionSystem));
     state->sound = (SoundSystem*)ArenaAlloc(&memory->permanent, sizeof(SoundSystem));
+    state->buttons = (ButtonSystem*)ArenaAlloc(&memory->permanent, sizeof(ButtonSystem));
 
     // Queues
     state->collisions = (CollisionQueue*)ArenaAlloc(&memory->permanent, sizeof(CollisionQueue));
@@ -348,6 +352,7 @@ static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFra
                         break;
                     case FIELD_SPEED:
                         if(state->entitiesReg->comp[i] & COMP_HEALTH) {
+                            float hp = healthSystem->currentHP[source];
                             PushTextf(
                                 state,
                                 &memory->transient,
@@ -358,6 +363,17 @@ static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFra
                                 100.0f
                             );
                         }
+                    case FIELD_UI:
+                        float hp = healthSystem->currentHP[source];
+                        PushTextf(
+                            state,
+                            &memory->transient,
+                            pos,
+                            color,
+                            anchor,
+                            "%s",
+                            "hi"
+                        );
                         break;
                 }
             }

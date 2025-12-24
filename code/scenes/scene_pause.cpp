@@ -25,10 +25,23 @@ Scene ScenePause = {
 
 static void onEnter(GameState* state) {
     printf("[Pause] Enter\n");
+    EntityID start = CreateEntity2(state);
+    printf("Pause: %i\n", start);
+    AddButton(state, start, false, false);
+    AddText(
+        state,
+        start,
+        {0, 0},
+        {1,0,1,1},
+        CENTER,
+        start,
+        FIELD_UI
+    );
 }
 
 static void onExit(GameState* state) {
     printf("[Pause] Exit\n");
+    CheckAndDeleteEntity(state, 21);
 }
 
 static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memory) {

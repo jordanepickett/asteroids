@@ -25,6 +25,7 @@ typedef int32_t EntityID;
 enum FieldType {
     FIELD_HEALTH,
     FIELD_SPEED,
+    FIELD_UI
 };
 
 typedef enum {

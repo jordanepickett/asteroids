@@ -16,5 +16,6 @@ enum {
     COMP_TEXT = 1 << 10,
     COMP_LIGHT = 1 << 11,
     COMP_EMITTER = 1 << 12,
+    COMP_BUTTON = 1 << 13,
 };
 
