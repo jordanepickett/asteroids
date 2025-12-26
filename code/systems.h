@@ -7,7 +7,6 @@
 #include "entity.h"
 #include <glm/glm.hpp>
 #include <glad/glad.h>
-#include <string>
 
 enum {
     SYS_INPUT   = 1 << 0,
@@ -39,7 +38,6 @@ typedef struct {
 } FireMissleSystem;
 
 typedef struct {
-    glm::vec2 pos[20];
     glm::vec4 color[20];
     Anchor anchor[20];
     EntityID source[20];
@@ -68,7 +66,6 @@ typedef struct {
 } ParticleSystem;
 
 typedef struct {
-    glm::vec2 pos[MAX_EMITTERS];
     glm::vec2 spawnVelocityBase[MAX_EMITTERS];
     glm::vec2 spawnVelocityVariance[MAX_EMITTERS];
     float spawnRate[MAX_EMITTERS];         // Particles per second
@@ -89,14 +86,12 @@ typedef struct {
 typedef struct {
     glm::mat4 projection[3];
     glm::mat4 view[3];
-    glm::vec3 pos[3];
     bool isLocked[3];
     bool isActive[3];
     unsigned char present[3];
 } CameraSystem;
 
 typedef struct {
-    glm::vec2 pos[16];
     glm::vec3 color[16];
     float radius[16];
     float intesity[16];
@@ -107,6 +102,10 @@ typedef struct {
 typedef struct {
     glm::vec2 pos[MAX_ENTITIES];
     glm::vec2 rot[MAX_ENTITIES];
+    unsigned char present[MAX_ENTITIES];
+} TransformSystem;
+
+typedef struct {
     glm::vec2 vel[MAX_ENTITIES];
     unsigned char present[MAX_ENTITIES];
 } MovementSystem;
@@ -116,12 +115,6 @@ typedef struct {
     int vertCount[MAX_ENTITIES];
     unsigned char present[MAX_ENTITIES];
 } RenderSystem;
-
-typedef struct {
-    glm::vec2 pos[MAX_ENTITIES];
-    glm::vec3 color[MAX_ENTITIES];
-    unsigned char present[MAX_ENTITIES];
-} ModelSystem;
 
 typedef struct {
     float currentHP[MAX_ENTITIES];

@@ -11,8 +11,8 @@
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
-static const int INTERNAL_WIDTH = 1280;
-static const int INTERNAL_HEIGHT = 720;
+static const int INTERNAL_WIDTH = 320;
+static const int INTERNAL_HEIGHT = 180;
 
 static const int MAX_UNIFORMS = 25;
 
@@ -264,4 +264,4 @@ struct PlatformAPI {
 
 void PlatformInit(PlatformRenderer* renderer, PlatformAudio* audio, PlatformMemory* memory);
 void PlatformRunGameLoop(PlatformAPI* api, PlatformRenderer *renderer, PlatformAudio *audio, const char* vertexShaderText, const char* fragementShaderText);
-void PlatformRender(PlatformRenderer *renderer, void* buffer, size_t size, LightSystem* system);
+void PlatformRender(PlatformRenderer *renderer, void* buffer, size_t size, LightSystem* system, TransformSystem* transforms);

@@ -10,24 +10,24 @@ static void CollisionQueueInit(CollisionQueue *q) { q->count = 0; }
 
 static void ProcessProjectileFire(GameState *state) {
     ProjectileQueue *queue = state->projectile;
-    MovementSystem *movement = state->movement;
+    TransformSystem *transformSystem = state->transforms;
 
     for(int i = 0; i < queue->count; i++) {
         EntityID origin = queue->events[i].origin;
         float lifeTime = queue->events[i].lifeTime;
         if (!state->entitiesReg->active[origin]) continue;
 
-        glm::vec2 originPos = movement->pos[origin];
-        glm::vec2 originRot = movement->rot[origin];
+        glm::vec2 originPos = transformSystem->pos[origin];
+        glm::vec2 originRot = transformSystem->rot[origin];
 
-        EntityID projectile = CreateEntity2(state);
         glm::vec2 pos = {
             originPos.x + originRot.x,
             originPos.y + originRot.y,
         };
+        EntityID projectile = CreateEntity2(state, pos);
 
         AddTag(state, projectile, TAG_MISSLE);
-        AddMovement(state, projectile, pos, originRot, originRot * 30.0f);
+        AddMovement(state, projectile, originRot * 30.0f);
         AddDamage(state, projectile, 1.0f, TAG_ASTEROID);
         AddRender(state, projectile, MISSLE, 4);
         AddLifeTimeSystem(state, projectile, lifeTime);
@@ -77,12 +77,11 @@ static void ProcessEmitterEvents(
 ) {
     switch(type) {
      case EVENT_ENTITY_DEATH: {
-            EntityID emitter = CreateEntity2(state);
-            AddMovement(state, emitter, { -position.x, position.y }, {0, 1}, direction);
+            EntityID emitter = CreateEntity2(state, { -position.x, position.y });
+            AddMovement(state, emitter, direction);
             AddEmitter(
                 state,
                 emitter,
-                position,
                 {0, 0},
                 {5, 5},
                 25,

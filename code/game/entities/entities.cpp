@@ -28,7 +28,7 @@ void CheckAndDeleteEntity(GameState *state, EntityID id) {
         printf("Queued To Die: %i\n", id);
         state->entitiesReg->toDelete[state->entitiesReg->deleteCount++] = id;
         if(state->entitiesReg->comp[id] & COMP_MOVEMENT) {
-            MovementSystem* system = state->movement;
+            TransformSystem* system = state->transforms;
             AddEntityEvent(state, EVENT_ENTITY_DEATH, id, system->pos[id], { 0, 0 });
         }
     }

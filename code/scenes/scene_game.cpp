@@ -35,6 +35,7 @@ static int CountAsteroids(GameState* state) {
 }
 
 static void TrySpawnAsteroid(GameState* state) {
+    TransformSystem* transformSystem = state->transforms;
     int amount = CountAsteroids(state);
     //printf("AMOUNT: %i \n", amount);
     if (amount >= MAX_FLOATABLES) return;
@@ -54,7 +55,9 @@ static void TrySpawnAsteroid(GameState* state) {
             float velY  = sinf(angle) * speed;
             glm::vec2 vel = { velX, velY };
             glm::vec2 rot = glm::normalize(vel);
-            AddMovement(state, a, pos, rot, vel);
+            transformSystem->pos[a] = pos;
+            transformSystem->rot[a] = rot;
+            AddMovement(state, a, vel);
             AddTag(state, a, TAG_ASTEROID);
             AddDamage(state, a, 1.0f, TAG_MISSLE);
             AddRender(state, a, ASTEROID, 8);
@@ -77,7 +80,7 @@ static void onEnter(GameState* state) {
     AddTag(state, player, TAG_PLAYER);
     glm::vec2 zero = { 0, 0};
     glm::vec2 rot = { 0, 1};
-    AddMovement(state, player, zero, rot, zero);
+    AddMovement(state, player, zero);
     AddHealth(state, player, 3.0f);
     AddRender(state, player, SHIP, 3);
     AddPlayerInput(state, player);
@@ -97,47 +100,43 @@ static void onEnter(GameState* state) {
     AddText(
         state,
         healthText,
-        {10, 20},
         {1,0,1,1},
         BOTTOM_LEFT,
         player,
         FIELD_HEALTH
     );
 
-    EntityID light = CreateEntity2(state);
-    AddLight(state, light, {1, 1}, {1, 0, 0}, 15.0f, 50.0f);
-    AddMovement(state, light, {1, 0}, {0, 1}, {0, 0});
+    EntityID light = CreateEntity2(state, {1, 1});
+    AddLight(state, light, {1, 0, 0}, 15.0f, 50.0f);
+    AddMovement(state, light, {0, 0});
     AddRender(state, light, MISSLE, 4);
 
-    EntityID light2= CreateEntity2(state);
-    AddLight(state, light2, {15, 15}, {0, 0, 1}, 15.0f, 50.0f);
-    AddMovement(state, light2, {15, 15}, {0, 1}, {0, 0});
+    EntityID light2= CreateEntity2(state, {15, 15});
+    AddLight(state, light2, {0, 0, 1}, 15.0f, 50.0f);
+    AddMovement(state, light2, {0, 0});
     AddRender(state, light2, MISSLE, 4);
 
     EntityID emitter = CreateEntity2(state);
-    AddMovement(state, emitter, {-10, 0}, {0, 1}, {10, 0});
-    /*
+    AddMovement(state, emitter, {10, 0});
     AddEmitter(
         state,
         emitter,
-        {-10, 0},
         {0, 0},
         {5, 5},
         25,
         0,
         0.5,
-        {1, 1, 0, 1},
-        {1, 0, 0, 1},
+        {0, 0, 1, 1},
+        {0, 1, 0, 1},
         1,
         1
     );
 
     EntityID emitter2 = CreateEntity2(state);
-    AddMovement(state, emitter2, {10, 0}, {0, 1}, {-10, 0});
+    AddMovement(state, emitter2, {-10, 0});
     AddEmitter(
         state,
         emitter2,
-        {-10, 0},
         {0, 0},
         {5, 5},
         25,
@@ -148,7 +147,6 @@ static void onEnter(GameState* state) {
         1,
         1
     );
-    */
 
 }
 

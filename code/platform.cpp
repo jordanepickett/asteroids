@@ -459,7 +459,7 @@ void PlatformRunGameLoop(PlatformAPI *api,
         GameRender(game, &memory, &frame);
         GameSound(game, &memory);
 
-        PlatformRender(renderer, game->commands, game->renderCommandsCount, game->light);
+        PlatformRender(renderer, game->commands, game->renderCommandsCount, game->light, game->transforms);
         PlatformAudioPlay(audio, &soundLibrary, game->soundCommands, game->soundCommandsCount);
 
         GameInput *temp = newInput;
@@ -568,7 +568,7 @@ static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 p
     glDisable(GL_BLEND);
 }
 
-void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, LightSystem* system) {
+void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, LightSystem* system, TransformSystem* transforms) {
 
     uint8_t* ptr = (uint8_t*)buffer;
     uint8_t* end = ptr + size;
@@ -584,7 +584,7 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
     glBindVertexArray(renderer->vertexVAO);
     glBindBuffer(GL_ARRAY_BUFFER, renderer->vertexVBO);
 
-    AddLightsFrame(renderer->vertexProgram, system);
+    AddLightsFrame(renderer->vertexProgram, system, transforms);
 
     while (ptr < end) {
         RenderCommandHeader* header = (RenderCommandHeader*)ptr;

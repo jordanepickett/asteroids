@@ -25,13 +25,12 @@ Scene ScenePause = {
 
 static void onEnter(GameState* state) {
     printf("[Pause] Enter\n");
-    EntityID start = CreateEntity2(state);
+    EntityID start = CreateEntity2(state, {0, 0});
     printf("Pause: %i\n", start);
     AddButton(state, start, false, false);
     AddText(
         state,
         start,
-        {0, 0},
         {1,0,1,1},
         CENTER,
         start,

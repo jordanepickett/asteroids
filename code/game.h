@@ -53,6 +53,7 @@ typedef struct GameState {
     int soundCommandsCount;
 
     EntityRegistry *entitiesReg;
+    TransformSystem *transforms;
     LightSystem *light;
     TextSystem *textSystem;
     MovementSystem *movement;

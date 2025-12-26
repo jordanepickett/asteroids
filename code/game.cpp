@@ -1,6 +1,7 @@
 #include "defs.h"
 #include "entity.h"
 #include "game.h"
+#include "scenes/scene.h"
 #include "scenes/scene_start.h"
 #include "scenes/scene_game.h"
 #include "audio/audio_commands.h"
@@ -107,19 +108,16 @@ inline void WrapSystem(GameState* state) {
     float bottom = -20.0f;
     float top    =  20.0f;
 
-    MovementSystem* movementSystem = state->movement;
+    TransformSystem* transformSystem = state->transforms;
     for(int i = 0; i < state->entitiesReg->count; i++) {
-        if(!(state->entitiesReg->comp[i] & COMP_MOVEMENT)) {
-            continue;
-        }
-        glm::vec2 pos = movementSystem->pos[i];
+        glm::vec2 pos = transformSystem->pos[i];
         if (pos.x > right)       pos.x = left;
         else if (pos.x < left)   pos.x = right;
 
         if (pos.y > top)         pos.y = bottom;
         else if (pos.y < bottom) pos.y = top;
 
-        movementSystem->pos[i] = pos;
+        transformSystem->pos[i] = pos;
     }
 
 }
@@ -144,6 +142,7 @@ void DestoryEntity(Entity *entity) {
 void ClearGameSystems(GameState *state) {
     // Systems 0
     memset(state->entitiesReg, 0, sizeof(EntityRegistry));
+    memset(state->transforms, 0, sizeof(TransformSystem));
     memset(state->emitter, 0, sizeof(EmitterSystem));
     memset(state->particles, 0, sizeof(ParticleSystem));
     memset(state->render, 0, sizeof(RenderSystem));
@@ -173,6 +172,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     
     // Systems
     state->entitiesReg = (EntityRegistry*)ArenaAlloc(&memory->permanent, sizeof(EntityRegistry));
+    state->transforms = (TransformSystem*)ArenaAlloc(&memory->permanent, sizeof(TransformSystem));
     state->emitter = (EmitterSystem*)ArenaAlloc(&memory->permanent, sizeof(EmitterSystem));
     state->particles = (ParticleSystem*)ArenaAlloc(&memory->permanent, sizeof(ParticleSystem));
     state->render = (RenderSystem*)ArenaAlloc(&memory->permanent, sizeof(RenderSystem));
@@ -208,13 +208,8 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     //CollisionQueueInit(state->collisions);
 
     SceneStack sceneStack = {};
-    sceneStack.scenes[sceneStack.count] = &SceneStart;
-    sceneStack.count++;
-    //sceneStack.scenes[sceneStack.count] = &SceneGame;
-    //sceneStack.count++;
     state->sceneStack = sceneStack;
-
-    sceneStack.scenes[0]->onEnter(state);
+    SceneStackPush(state, &SceneStart);
 }
 
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory) {
@@ -290,6 +285,7 @@ static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFra
     cmd->color = {0.f, 0.f, 0.f};
 
     MovementSystem *movementSystem = state->movement;
+    TransformSystem *transformSystem = state->transforms;
     RenderSystem *renderSystem = state->render;
     CameraSystem *cameraSystem = state->cameraSys;
     TextSystem *textSystem = state->textSystem;
@@ -308,11 +304,8 @@ static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFra
     if(renderSystems & SYS_RENDER) {
         for(int i = 0; i < state->entitiesReg->count; i++) {
             if((state->entitiesReg->comp[i] & (COMP_RENDER))) {
-
-                glm::vec2 pos = {0,0};
-                glm::vec2 rot = {0,1};
-                pos = movementSystem->pos[i];
-                rot = movementSystem->rot[i];
+                glm::vec2 pos = transformSystem->pos[i];
+                glm::vec2 rot = transformSystem->rot[i];
                 int count = renderSystem->vertCount[i];
                 Vertex *verts = renderSystem->verts[i];
                 //if(i == 5) {
@@ -330,7 +323,7 @@ static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFra
             }
 
             if((state->entitiesReg->comp[i] & (COMP_TEXT))) {
-                glm::vec2 pos = textSystem->pos[i];
+                glm::vec2 pos = transformSystem->pos[i];
                 glm::vec4 color = textSystem->color[i];
                 Anchor anchor = textSystem->anchor[i];
                 FieldType field = textSystem->fieldType[i];

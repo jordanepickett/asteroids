@@ -3,4 +3,4 @@
 
 void LightUniformsInit(Program* program);
 
-void AddLightsFrame(Program* program, LightSystem* system);
+void AddLightsFrame(Program* program, LightSystem* lightSystem, TransformSystem* transformSystem);

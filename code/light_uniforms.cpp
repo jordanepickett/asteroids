@@ -22,26 +22,26 @@ void LightUniformsInit(Program* program) {
     }
 }
 
-void AddLightsFrame(Program* program, LightSystem* system) {
-    int lightCount = ArrayCount(system->pos);
+void AddLightsFrame(Program* program, LightSystem* lightSystem, TransformSystem* transformSystem) {
+    int lightCount = ArrayCount(lightSystem->color);
     glUniform3f(program->uniformLocations[U_AMBIENT], 0.5f, 0.8f, 0.9f);
     //TODO Dynamic count
     glUniform1i(program->uniformLocations[U_LIGHTCOUNT], 2);
     int lightsInUse = 0;
     for (int i = 0; i < lightCount && i < 16; i++) {
         char uniformName[64];
-        if(!system->present[i]) {
+        if(!lightSystem->present[i]) {
             continue;
         }
 
-        glUniform3f(program->lightUniforms[lightsInUse][LU_POSITION], -system->pos[i].x, system->pos[i].y, 1);
+        glUniform3f(program->lightUniforms[lightsInUse][LU_POSITION], -transformSystem->pos[i].x, transformSystem->pos[i].y, 1);
         //printf("lights[%d].position location: %f\n", lightsInUse, system->pos[i].x);
 
-        glUniform3f(program->lightUniforms[lightsInUse][LU_COLOR], system->color[i].r, system->color[i].g, system->color[i].b);
+        glUniform3f(program->lightUniforms[lightsInUse][LU_COLOR], lightSystem->color[i].r, lightSystem->color[i].g, lightSystem->color[i].b);
 
-        glUniform1f(program->lightUniforms[lightsInUse][LU_RADIUS], system->radius[i]);
+        glUniform1f(program->lightUniforms[lightsInUse][LU_RADIUS], lightSystem->radius[i]);
 
-        glUniform1f(program->lightUniforms[lightsInUse][LU_INTENSITY], system->intesity[i]);
+        glUniform1f(program->lightUniforms[lightsInUse][LU_INTENSITY], lightSystem->intesity[i]);
         ++lightsInUse;
     }
 

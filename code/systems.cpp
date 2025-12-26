@@ -44,6 +44,26 @@ static void EntityRegistryInit(EntityRegistry *e) {
     }
 }
 
+static void AddTransform(GameState *state, EntityID id) {
+    TransformSystem *system = state->transforms;
+
+    system->pos[id] = {0, 0};
+    system->rot[id] = {0, 1};
+    system->present[id] = 1;
+    state->entitiesReg->comp[id] |= COMP_TRANSFORM;
+    
+}
+
+static void AddTransform(GameState *state, EntityID id, glm::vec2 pos) {
+    TransformSystem *system = state->transforms;
+
+    system->pos[id] = pos;
+    system->rot[id] = {0, 1};
+    system->present[id] = 1;
+    state->entitiesReg->comp[id] |= COMP_TRANSFORM;
+    
+}
+
 static EntityID CreateEntity2(GameState* state) {
     EntityID id;
     if (state->entitiesReg->freeCount > 0) {
@@ -60,6 +80,30 @@ static EntityID CreateEntity2(GameState* state) {
     state->entitiesReg->active[id] = 1;
     state->entitiesReg->comp[id] = COMP_NONE;
     state->entitiesReg->tag[id] = TAG_NONE;
+    AddTransform(state, id);
+#ifdef DEBUG
+    printf("Creating Entity with ID: %i\n", id);
+#endif
+    return id;
+}
+
+static EntityID CreateEntity2(GameState* state, glm::vec2 pos) {
+    EntityID id;
+    if (state->entitiesReg->freeCount > 0) {
+        id = state->entitiesReg->freeList[--state->entitiesReg->freeCount];
+#ifdef DEBUG
+        printf("Old Entity Slot found: %i\n", id);
+#endif
+    } else {
+        assert(state->entitiesReg->count < MAX_ENTITIES);
+        id = state->entitiesReg->count++;
+        printf("New Entity ID: %i\n", id);
+    }
+
+    state->entitiesReg->active[id] = 1;
+    state->entitiesReg->comp[id] = COMP_NONE;
+    state->entitiesReg->tag[id] = TAG_NONE;
+    AddTransform(state, id, pos);
 #ifdef DEBUG
     printf("Creating Entity with ID: %i\n", id);
 #endif
@@ -101,7 +145,6 @@ static void AddCamera(
 
     system->projection[id] = glm::ortho(left, right, bottom, top, nearZ, farZ);
     system->view[id] = lookAt;
-    system->pos[id] = pos;
     system->isLocked[id] = isLocked;
     system->isActive[id] = isActive;
     system->present[id] = 1;
@@ -111,7 +154,6 @@ static void AddCamera(
 static void AddEmitter(
     GameState *state,
     EntityID id,
-    glm::vec2 pos,
     glm::vec2 spawnVelocityBase,
     glm::vec2 spawnVelocityVariance,
     float spawnRate,
@@ -128,7 +170,6 @@ static void AddEmitter(
     assert(id >= 0 && id < MAX_EMITTERS);
     EmitterSystem *system = state->emitter;
 
-    system->pos[id] = pos;
     system->spawnVelocityBase[id] = spawnVelocityBase;
     system->spawnVelocityVariance[id] = spawnVelocityVariance;
     system->spawnRate[id] = spawnRate;
@@ -164,7 +205,6 @@ static void AddButton(
 static void AddText(
     GameState *state,
     EntityID id,
-    glm::vec2 pos,
     glm::vec4 color,
     Anchor anchor,
     EntityID source,
@@ -175,7 +215,6 @@ static void AddText(
 #endif
     assert(id >= 0 && id < MAX_ENTITIES);
     TextSystem *system = state->textSystem;
-    system->pos[id] = pos;
     system->color[id] = color;
     system->anchor[id] = anchor;
     system->source[id] = source;
@@ -186,7 +225,6 @@ static void AddText(
 
 static void AddLight(GameState *state,
                      EntityID id,
-                     glm::vec2 pos,
                      glm::vec3 color,
                      float radius,
                      float intesity,
@@ -197,7 +235,6 @@ static void AddLight(GameState *state,
 #endif
     assert(id >= 0 && id < MAX_ENTITIES);
     LightSystem *system = state->light;
-    system->pos[id] = pos;
     system->color[id] = color;
     system->radius[id] = radius;
     system->intesity[id] = intesity;
@@ -256,8 +293,6 @@ static void AddDamage(GameState *state, EntityID id, float amount, TagMask canHi
 static void AddMovement(
     GameState *state,
     EntityID id,
-    glm::vec2 pos,
-    glm::vec2 rot,
     glm::vec2 vel
 ) {
 #ifdef DEBUG
@@ -265,8 +300,6 @@ static void AddMovement(
 #endif
     assert(id >= 0 && id < MAX_ENTITIES);
     MovementSystem *m = state->movement;
-    m->pos[id] = pos;
-    m->rot[id] = rot;
     m->vel[id] = vel;
     m->present[id] = 1;
     state->entitiesReg->comp[id] |= COMP_MOVEMENT;
@@ -318,12 +351,14 @@ static void AddFloatable(GameState *state, EntityID id) {
 
 static void MovementUpdate(GameState* state, PlatformFrame *frame) {
     MovementSystem* system = state->movement;
+    TransformSystem* transforms = state->transforms;
     for (EntityID i = 0; i < state->entitiesReg->count; ++i) {
         if(!(state->entitiesReg->comp[i] & COMP_MOVEMENT)) {
             continue;
         }
-        system->pos[i].x += system->vel[i].x * frame->deltaTime;
-        system->pos[i].y += system->vel[i].y * frame->deltaTime;
+
+        transforms->pos[i].x += system->vel[i].x * frame->deltaTime;
+        transforms->pos[i].y += system->vel[i].y * frame->deltaTime;
     }
 }
 
@@ -338,12 +373,10 @@ static glm::vec2 RandomVariance(glm::vec2 variance)
 static void EmitterUpdate(GameState* state, float deltaTime) {
     EmitterSystem* system = state->emitter;
     ParticleSystem* particleSystem = state->particles;
+    TransformSystem* transformSystem = state->transforms;
     for (EntityID i = 0; i < state->entitiesReg->count; ++i) {
         if(!(state->entitiesReg->comp[i] & COMP_EMITTER)) {
             continue;
-        }
-        if((state->entitiesReg->comp[i] & COMP_MOVEMENT)) {
-            system->pos[i] = state->movement->pos[i];
         }
         //system->endColor[i] = {1, 0, 0, 1};
         glm::vec2 parentVelocity = { 0, 0 };
@@ -358,7 +391,7 @@ static void EmitterUpdate(GameState* state, float deltaTime) {
                 parentVelocity +
                 RandomVariance(system->spawnVelocityVariance[i]);
 
-            CreateParticle(particleSystem, system->pos[i], vel,
+            CreateParticle(particleSystem, transformSystem->pos[i], vel,
                            system->particleLifetime[i],
                            system->startColor[i],
                            system->endColor[i]);
@@ -372,6 +405,7 @@ static void PlayerInputUpdate(
 ) {
     PlayerInputSystem* inputSystem = state->playerInput;
     MovementSystem*  movementSystem = state->movement;
+    TransformSystem*  transformSystem  = state->transforms;
     for (int i = 0; i < state->entitiesReg->count; ++i) {
         if(!(state->entitiesReg->comp[i] & COMP_PLAYER_INPUT)) {
             continue;
@@ -401,15 +435,15 @@ static void PlayerInputUpdate(
         input.x = -input.x;
 
         if(glm::length(input) > 0.0f) {
-            movementSystem->rot[i] = glm::normalize(glm::mix(
-                movementSystem->rot[i],
+            transformSystem->rot[i] = glm::normalize(glm::mix(
+                transformSystem->rot[i],
                 input, 
                 rotLerp * frame->deltaTime
             ));
         }
 
         if(rightBurst) {
-            movementSystem->vel[i] += movementSystem->rot[i];
+            movementSystem->vel[i] += transformSystem->rot[i];
         }
 
         if (glm::length(movementSystem->vel[i]) > maxSpeed) {
@@ -428,7 +462,7 @@ static void CollisionUpdate(
     CollisionQueue *queue
 ) {
     CollisionSystem* collisionSystem = state->collision;
-    MovementSystem* movementSystem = state->movement;
+    TransformSystem* transformSystem = state->transforms;
     for(int i = 0; i < state->entitiesReg->count; i++) {
         if(!(state->entitiesReg->comp[i] & COMP_COLLISION)) {
             continue;
@@ -437,11 +471,11 @@ static void CollisionUpdate(
             if(!(state->entitiesReg->comp[j] & COMP_COLLISION)) {
                 continue;
             }
-            float aX = movementSystem->pos[i].x;
-            float bX = movementSystem->pos[j].x;
+            float aX = transformSystem->pos[i].x;
+            float bX = transformSystem->pos[j].x;
 
-            float aY = movementSystem->pos[i].y;
-            float bY = movementSystem->pos[j].y;
+            float aY = transformSystem->pos[i].y;
+            float bY = transformSystem->pos[j].y;
 
             float dx = aX - bX;
             float dy = aY - bY;
