@@ -145,7 +145,7 @@ void ClearGameSystems(GameState *state) {
     memset(state->transforms, 0, sizeof(TransformSystem));
     memset(state->emitter, 0, sizeof(EmitterSystem));
     memset(state->particles, 0, sizeof(ParticleSystem));
-    memset(state->render, 0, sizeof(RenderSystem));
+    memset(state->meshes, 0, sizeof(MeshSystem));
     memset(state->light, 0, sizeof(LightSystem));
     memset(state->textSystem, 0, sizeof(TextSystem));
     memset(state->movement, 0, sizeof(MovementSystem));
@@ -175,7 +175,7 @@ void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
     state->transforms = (TransformSystem*)ArenaAlloc(&memory->permanent, sizeof(TransformSystem));
     state->emitter = (EmitterSystem*)ArenaAlloc(&memory->permanent, sizeof(EmitterSystem));
     state->particles = (ParticleSystem*)ArenaAlloc(&memory->permanent, sizeof(ParticleSystem));
-    state->render = (RenderSystem*)ArenaAlloc(&memory->permanent, sizeof(RenderSystem));
+    state->meshes = (MeshSystem*)ArenaAlloc(&memory->permanent, sizeof(MeshSystem));
     state->light = (LightSystem*)ArenaAlloc(&memory->permanent, sizeof(LightSystem));
     state->textSystem = (TextSystem*)ArenaAlloc(&memory->permanent, sizeof(TextSystem));
     state->movement = (MovementSystem*)ArenaAlloc(&memory->permanent, sizeof(MovementSystem));
@@ -243,10 +243,10 @@ void UpdateEntities(GameState *state, PlatformFrame *frame, uint32_t activeSyste
     //printf("entity count: %i\n", state->entitiesReg->count);
 
     // Inputs
-    if(activeSystems & SYS_INPUT) {
+    if(activeSystems & SYS_GAME_INPUT) {
         PlayerInputUpdate(state, frame);
+        FireMissleUpdate(state, frame);
     }
-    FireMissleUpdate(state, frame);
 
     // Queue processors
     ProcessProjectileFire(state);
@@ -274,6 +274,105 @@ void UpdateEntities(GameState *state, PlatformFrame *frame, uint32_t activeSyste
 
 }
 
+static void RenderMeshes(GameState *state, PlatformMemory *memory, glm::mat4 cameraMvp) {
+    MovementSystem *movementSystem = state->movement;
+    TransformSystem *transformSystem = state->transforms;
+    MeshSystem *meshSystem = state->meshes;
+
+    for(int i = 0; i < state->entitiesReg->count; i++) {
+        if((state->entitiesReg->comp[i] & (COMP_MESH))) {
+            glm::vec2 pos = transformSystem->pos[i];
+            glm::vec2 rot = transformSystem->rot[i];
+            int count = meshSystem->vertCount[i];
+            Vertex *verts = meshSystem->verts[i];
+            //if(i == 5) {
+            //    for(int j = 0; j < renderSystem->vertCount[i]; j++) {
+            //        Vertex *vert = &verts[j];
+            //        vert->color = {1,1,1,0.8};
+            //    }
+            //}
+
+            if(count == 3) {
+                PushTrianges2(cameraMvp, &memory->transient, verts, count, pos, rot);
+            } else {
+                PushLoop2(cameraMvp, &memory->transient, verts, count, pos, rot);
+            }
+        }
+    }
+}
+
+static void RenderUI(GameState *state, PlatformMemory *memory, glm::mat4 cameraMvp) {
+    TransformSystem *transformSystem = state->transforms;
+    TextSystem *textSystem = state->textSystem;
+    ButtonSystem *buttonSystem = state->buttons;
+    HealthSystem *healthSystem = state->health;
+
+    for(int i = 0; i < state->entitiesReg->count; i++) {
+        glm::vec2 pos = transformSystem->pos[i];
+        if((state->entitiesReg->comp[i] & (COMP_TEXT))) {
+            glm::vec4 color = textSystem->color[i];
+            Anchor anchor = textSystem->anchor[i];
+            FieldType field = textSystem->fieldType[i];
+            EntityID source = textSystem->source[i];
+            switch (field) {
+                case FIELD_HEALTH:
+                    if(state->entitiesReg->comp[source] & COMP_HEALTH) {
+                        float hp = healthSystem->currentHP[source];
+                        PushTextf(
+                            state,
+                            &memory->transient,
+                            pos,
+                            color,
+                            anchor,
+                            "HEALTH: %i",
+                            (int)hp
+                        );
+                    }
+                    break;
+                case FIELD_SPEED:
+                    if(state->entitiesReg->comp[i] & COMP_HEALTH) {
+                        float hp = healthSystem->currentHP[source];
+                        PushTextf(
+                            state,
+                            &memory->transient,
+                            pos,
+                            color,
+                            anchor,
+                            "HEALTH: %f",
+                            100.0f
+                        );
+                    }
+                case FIELD_START_GAME:
+                    PushTextf(
+                        state,
+                        &memory->transient,
+                        pos,
+                        color,
+                        anchor,
+                        "%s",
+                        "Start Game"
+                    );
+                    break;
+                case FIELD_OPEN_SETTINGS:
+                    PushTextf(
+                        state,
+                        &memory->transient,
+                        pos,
+                        color,
+                        anchor,
+                        "%s",
+                        "Settings"
+                    );
+                    break;
+            }
+        }
+        if((state->entitiesReg->comp[i] & (COMP_BUTTON))) {
+            PushLoop2(cameraMvp, &memory->transient, BUTTON, 4, pos, transformSystem->rot[i]);
+        }
+
+    }
+}
+
 static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFrame* frame, uint32_t renderSystems) {
 
     ArenaReset(&memory->transient);
@@ -286,7 +385,7 @@ static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFra
 
     MovementSystem *movementSystem = state->movement;
     TransformSystem *transformSystem = state->transforms;
-    RenderSystem *renderSystem = state->render;
+    MeshSystem *renderSystem = state->meshes;
     CameraSystem *cameraSystem = state->cameraSys;
     TextSystem *textSystem = state->textSystem;
     HealthSystem *healthSystem = state->health;
@@ -302,78 +401,13 @@ static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFra
     }
 
     if(renderSystems & SYS_RENDER) {
-        for(int i = 0; i < state->entitiesReg->count; i++) {
-            if((state->entitiesReg->comp[i] & (COMP_RENDER))) {
-                glm::vec2 pos = transformSystem->pos[i];
-                glm::vec2 rot = transformSystem->rot[i];
-                int count = renderSystem->vertCount[i];
-                Vertex *verts = renderSystem->verts[i];
-                //if(i == 5) {
-                //    for(int j = 0; j < renderSystem->vertCount[i]; j++) {
-                //        Vertex *vert = &verts[j];
-                //        vert->color = {1,1,1,0.8};
-                //    }
-                //}
-
-                if(count == 3) {
-                    PushTrianges2(cameraMvp, &memory->transient, verts, count, pos, rot);
-                } else {
-                    PushLoop2(cameraMvp, &memory->transient, verts, count, pos, rot);
-                }
-            }
-
-            if((state->entitiesReg->comp[i] & (COMP_TEXT))) {
-                glm::vec2 pos = transformSystem->pos[i];
-                glm::vec4 color = textSystem->color[i];
-                Anchor anchor = textSystem->anchor[i];
-                FieldType field = textSystem->fieldType[i];
-                EntityID source = textSystem->source[i];
-                switch (field) {
-                    case FIELD_HEALTH:
-                        if(state->entitiesReg->comp[source] & COMP_HEALTH) {
-                            float hp = healthSystem->currentHP[source];
-                            PushTextf(
-                                state,
-                                &memory->transient,
-                                pos,
-                                color,
-                                anchor,
-                                "HEALTH: %i",
-                                (int)hp
-                            );
-                        }
-                        break;
-                    case FIELD_SPEED:
-                        if(state->entitiesReg->comp[i] & COMP_HEALTH) {
-                            float hp = healthSystem->currentHP[source];
-                            PushTextf(
-                                state,
-                                &memory->transient,
-                                pos,
-                                color,
-                                anchor,
-                                "HEALTH: %f",
-                                100.0f
-                            );
-                        }
-                    case FIELD_UI:
-                        float hp = healthSystem->currentHP[source];
-                        PushTextf(
-                            state,
-                            &memory->transient,
-                            pos,
-                            color,
-                            anchor,
-                            "%s",
-                            "hi"
-                        );
-                        break;
-                }
-            }
-        }
+        // Mesh Render
+        RenderMeshes(state, memory, cameraMvp);
+        RenderUI(state, memory, cameraMvp);
     }
 
 
+    // Particle Render
     if(renderSystems & SYS_PARTICLES) {
         int vertexCount = 0;
         static ParticleVertex verts[MAX_PARTICLES];
@@ -391,6 +425,8 @@ static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFra
             PushParticleBatch(cameraMvp, &memory->transient, verts, vertexCount);
         }
     }
+
+    // Debug Render
 
     {
         // TODO: Text

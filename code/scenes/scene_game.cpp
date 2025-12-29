@@ -14,7 +14,9 @@ static void onExit(GameState* state);
 // Static scene definition
 Scene SceneGame = {
     SCENE_GAME,
-    SYS_INPUT | SYS_UI | SYS_MOVE | SYS_RENDER | SYS_PARTICLES,
+    {},
+    0,
+    SYS_INPUT | SYS_UI | SYS_MOVE | SYS_RENDER | SYS_PARTICLES | SYS_GAME_INPUT,
     true,
     true,
     update,
@@ -60,7 +62,7 @@ static void TrySpawnAsteroid(GameState* state) {
             AddMovement(state, a, vel);
             AddTag(state, a, TAG_ASTEROID);
             AddDamage(state, a, 1.0f, TAG_MISSLE);
-            AddRender(state, a, ASTEROID, 8);
+            AddMesh(state, a, ASTEROID, 8);
             AddFloatable(state, a);
             AddCollision(state, a, 0.5f);
 
@@ -82,7 +84,7 @@ static void onEnter(GameState* state) {
     glm::vec2 rot = { 0, 1};
     AddMovement(state, player, zero);
     AddHealth(state, player, 3.0f);
-    AddRender(state, player, SHIP, 3);
+    AddMesh(state, player, SHIP, 3);
     AddPlayerInput(state, player);
     AddFireMissleSystem(state, player);
     AddCollision(state, player, 1.0f);
@@ -109,12 +111,12 @@ static void onEnter(GameState* state) {
     EntityID light = CreateEntity2(state, {1, 1});
     AddLight(state, light, {1, 0, 0}, 15.0f, 50.0f);
     AddMovement(state, light, {0, 0});
-    AddRender(state, light, MISSLE, 4);
+    AddMesh(state, light, MISSLE, 4);
 
     EntityID light2= CreateEntity2(state, {15, 15});
     AddLight(state, light2, {0, 0, 1}, 15.0f, 50.0f);
     AddMovement(state, light2, {0, 0});
-    AddRender(state, light2, MISSLE, 4);
+    AddMesh(state, light2, MISSLE, 4);
 
     EntityID emitter = CreateEntity2(state);
     AddMovement(state, emitter, {10, 0});

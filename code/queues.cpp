@@ -29,7 +29,7 @@ static void ProcessProjectileFire(GameState *state) {
         AddTag(state, projectile, TAG_MISSLE);
         AddMovement(state, projectile, originRot * 30.0f);
         AddDamage(state, projectile, 1.0f, TAG_ASTEROID);
-        AddRender(state, projectile, MISSLE, 4);
+        AddMesh(state, projectile, MISSLE, 4);
         AddLifeTimeSystem(state, projectile, lifeTime);
         AddCollision(state, projectile, 1.0f);
         AddEntityEvent(state, EVENT_ENTITY_ATTACK, origin, originPos, originRot);

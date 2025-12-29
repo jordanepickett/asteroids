@@ -12,6 +12,8 @@ enum SceneType {
 
 typedef struct {
     SceneType type;
+    int sceneEntities[20];
+    int sceneEntitiesCount;
     uint32_t systemMask;
     bool blocksUpdate;
     bool blocksRender;

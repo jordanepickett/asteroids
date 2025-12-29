@@ -4,7 +4,7 @@ typedef uint32_t CompMask;
 enum {
     COMP_NONE      = 0,
     COMP_MOVEMENT  = 1 << 0,
-    COMP_RENDER    = 1 << 1,
+    COMP_MESH    = 1 << 1,
     COMP_COLLISION = 1 << 2,
     COMP_HEALTH    = 1 << 3,
     COMP_DAMAGE    = 1 << 4,
@@ -17,7 +17,6 @@ enum {
     COMP_LIGHT = 1 << 11,
     COMP_EMITTER = 1 << 12,
     COMP_BUTTON = 1 << 13,
-    COMP_TRANSFORM = 1 << 14,
-    COMP_MESH = 1 << 15
+    COMP_TRANSFORM = 1 << 14
 };
 

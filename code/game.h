@@ -32,6 +32,13 @@ static Vertex ASTEROID[8] = {
     {{ -1.0f, -0.2f }, {1.f, 1.f, 1.f, 1.0f}, {0.f, 0.f, 1.f}}
 };
 
+static Vertex BUTTON[4] = {
+    {{ -3.0f,  2.0f}, {1.f, 1.f, 1.f, 1.0f},{0.f, 0.f, 1.f} },
+    {{ -3.0f,  -2.0f}, {1.f, 1.f, 1.f, 1.0f}, {0.f, 0.f, 1.f}},
+    {{ 3.0f,  -2.0f}, {1.f, 1.f, 1.f, 1.0f}, {0.f, 0.f, 1.f}},
+    {{ 3.0f,  2.0f}, {1.f, 1.f, 1.f, 1.0f}, {0.f, 0.f, 1.f}},
+};
+
 typedef struct {
     Scene* scenes[2];
     int count;
@@ -57,7 +64,7 @@ typedef struct GameState {
     LightSystem *light;
     TextSystem *textSystem;
     MovementSystem *movement;
-    RenderSystem *render;
+    MeshSystem *meshes;
     HealthSystem *health;
     DamageSystem *damage;
     CameraSystem *cameraSys;

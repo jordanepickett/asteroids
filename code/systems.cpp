@@ -18,7 +18,7 @@ static void CollisionSystemInit(CollisionSystem *c) {
     for (int i = 0; i < MAX_ENTITIES; ++i) c->present[i] = -1;
 }
 
-static void RenderSystemInit(RenderSystem *r) {
+static void MeshSystemInit(MeshSystem *r) {
     for (int i = 0; i < MAX_ENTITIES; ++i) r->present[i] = -1;
 }
 
@@ -189,6 +189,7 @@ static void AddEmitter(
 static void AddButton(
     GameState *state,
     EntityID id,
+    glm::vec2 size,
     bool isSelected,
     bool isSelectable
 ) {
@@ -197,6 +198,7 @@ static void AddButton(
 #endif
     assert(id >= 0 && id < MAX_ENTITIES);
     ButtonSystem *system = state->buttons;
+    system->size[id] = size;
     system->isSelected[id] = isSelected;
     system->isSelectable[id] = isSelectable;
     state->entitiesReg->comp[id] |= COMP_BUTTON;
@@ -254,16 +256,16 @@ static void AddCollision(GameState *state, EntityID id, float size) {
     state->entitiesReg->comp[id] |= COMP_COLLISION;
 }
 
-static void AddRender(GameState *state, EntityID id, Vertex *verts, int vertCount) {
+static void AddMesh(GameState *state, EntityID id, Vertex *verts, int vertCount) {
 #ifdef DEBUG
     printf("Adding Render to: %i\n", id);
 #endif
     assert(id >= 0 && id < MAX_ENTITIES);
-    RenderSystem *system = state->render;
+    MeshSystem *system = state->meshes;
     system->verts[id] = verts;
     system->vertCount[id] = vertCount;
     system->present[id] = 1;
-    state->entitiesReg->comp[id] |= COMP_RENDER;
+    state->entitiesReg->comp[id] |= COMP_MESH;
 }
 
 static void AddHealth(GameState *state, EntityID id, float hp) {
@@ -544,8 +546,9 @@ static void RemoveEntityFromSystems(GameState *state, EntityID id) {
     }
 
     {
-        if (state->entitiesReg->comp[id] & COMP_RENDER) {
-            state->render->present[id] = 0;
+
+        if (state->entitiesReg->comp[id] & COMP_MESH) {
+            state->meshes->present[id] = 0;
         }
     }
 

@@ -16,6 +16,7 @@ enum {
     SYS_RENDER  = 1 << 4,
     SYS_UI      = 1 << 5,
     SYS_PARTICLES      = 1 << 6,
+    SYS_GAME_INPUT = 1 << 7,
 };
 
 typedef struct {
@@ -46,9 +47,10 @@ typedef struct {
 } TextSystem;
 
 typedef struct {
-    bool isSelectable[20];
-    bool isSelected[20];
-    unsigned char present[20];
+    glm::vec2 size[MAX_ENTITIES];
+    bool isSelectable[MAX_ENTITIES];
+    bool isSelected[MAX_ENTITIES];
+    unsigned char present[MAX_ENTITIES];
 } ButtonSystem;
 
 typedef struct {
@@ -114,7 +116,7 @@ typedef struct {
     Vertex* verts[MAX_ENTITIES];
     int vertCount[MAX_ENTITIES];
     unsigned char present[MAX_ENTITIES];
-} RenderSystem;
+} MeshSystem;
 
 typedef struct {
     float currentHP[MAX_ENTITIES];

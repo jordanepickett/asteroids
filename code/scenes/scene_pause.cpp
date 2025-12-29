@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "defs.h"
 #include "game.h"
 #include "queues.cpp"
 #include "platform.h"
@@ -13,6 +14,8 @@ static void onExit(GameState* state);
 // Static scene definition
 Scene ScenePause = {
     SCENE_PAUSE,
+    {},
+    0,
     SYS_INPUT | SYS_UI | SYS_RENDER,
     true,
     true,
@@ -27,20 +30,26 @@ static void onEnter(GameState* state) {
     printf("[Pause] Enter\n");
     EntityID start = CreateEntity2(state, {0, 0});
     printf("Pause: %i\n", start);
-    AddButton(state, start, false, false);
+    AddButton(state, start, { 1, 1 }, false, false);
     AddText(
         state,
         start,
         {1,0,1,1},
         CENTER,
         start,
-        FIELD_UI
+        FIELD_START_GAME
     );
+
+    ScenePause.sceneEntities[ScenePause.sceneEntitiesCount++] = start;
 }
 
 static void onExit(GameState* state) {
     printf("[Pause] Exit\n");
-    CheckAndDeleteEntity(state, 21);
+    for(int i = 0; i < ScenePause.sceneEntitiesCount; i++) {
+    printf("Delete entity: %i\n", ScenePause.sceneEntities[i]);
+        CheckAndDeleteEntity(state, ScenePause.sceneEntities[i]);
+    }
+    ScenePause.sceneEntitiesCount = 0;
 }
 
 static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memory) {
