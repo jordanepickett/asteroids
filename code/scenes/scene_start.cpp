@@ -40,8 +40,8 @@ static void onEnter(GameState* state) {
     AddCamera(state, camera, lookAt, cameraPos, true, true);
 
     // Utilize anchors for raw position with the transform as the offset from that (For buttons -> children (text))
-    EntityID start = CreateEntity2(state, {0, 0});
-    AddButton(state, start, { 150, 50 }, true, true);
+    EntityID start = CreateEntity2(state, {0, -100});
+    AddButton(state, start, { 150, 30}, true, true);
     AddText(
         state,
         start,
@@ -50,8 +50,8 @@ static void onEnter(GameState* state) {
         start,
         FIELD_START_GAME
     );
-    EntityID settings = CreateEntity2(state, {0, 100});
-    AddButton(state, settings, { 150, 50 }, false, true);
+    EntityID settings = CreateEntity2(state, {0, -50});
+    AddButton(state, settings, { 150, 30 }, false, true);
     AddText(
         state,
         settings,
@@ -60,6 +60,19 @@ static void onEnter(GameState* state) {
         settings,
         FIELD_OPEN_SETTINGS
     );
+
+    EntityID exit = CreateEntity2(state, {0, 0});
+    AddButton(state, exit, { 150, 30 }, false, true);
+    AddText(
+        state,
+        exit,
+        {1,1,1,1},
+        CENTER,
+        exit,
+        FIELD_OPEN_SETTINGS
+    );
+
+    state->buttons->selectedButton = start;
 }
 
 static void onExit(GameState* state) {
@@ -68,15 +81,41 @@ static void onExit(GameState* state) {
 }
 
 static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memory) {
-    if (WasPressed(frame->input.controllers[0].actionDown)) {
-        printf("[Start] next scene.\n");
+    if(WasPressed(frame->input.controllers[0].moveDown)) {
+        printf("Move down\n");
+        EntityID newButton = state->buttons->selectedButton + 1;
+        printf("new button: %i\n", newButton);
+        if(!state->buttons->present[newButton]) {
+            for(int i = 0; i < state->entitiesReg->count; i++) {
+                if(state->buttons->present[i]) {
+                    state->buttons->selectedButton = i;
+                    break;
+                }
+            }
+        } else {
+            state->buttons->selectedButton = newButton;
+        }
+    }
+
+    if(WasPressed(frame->input.controllers[0].moveUp)) {
+        printf("Move up\n");
+        EntityID newButton = state->buttons->selectedButton - 1;
+        printf("new button: %i\n", newButton);
+        if(!state->buttons->present[newButton]) {
+            for(int i = state->entitiesReg->count; i > 0; i--) {
+                if(state->buttons->present[i]) {
+                    state->buttons->selectedButton = i;
+                    break;
+                }
+            }
+        } else {
+            state->buttons->selectedButton = newButton;
+        }
+    }
+
+    if(WasPressed(frame->input.controllers[0].actionDown) && (state->buttons->selectedButton == 1)) {
         SceneStackPop(state);
         SceneStackPush(state, &SceneGame);
     }
-    // Input polling, menu selection, etc
-    /*
-    if (StartButtonPressed()) {
-        SetScene(state, &Scene_Game);
-    }
-    */
+
 }

@@ -46,7 +46,7 @@ static void onEnter(GameState* state) {
 static void onExit(GameState* state) {
     printf("[Pause] Exit\n");
     for(int i = 0; i < ScenePause.sceneEntitiesCount; i++) {
-    printf("Delete entity: %i\n", ScenePause.sceneEntities[i]);
+        printf("Delete entity: %i\n", ScenePause.sceneEntities[i]);
         CheckAndDeleteEntity(state, ScenePause.sceneEntities[i]);
     }
     ScenePause.sceneEntitiesCount = 0;

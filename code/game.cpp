@@ -390,7 +390,7 @@ static void RenderUI(GameState *state, PlatformMemory *memory, glm::mat4 cameraM
             TextVertex q[4];
 
             for(int v = 0; v < 4; v++) {
-                if(buttonSystem->isSelected[i]) {
+                if(buttonSystem->selectedButton == i) {
                     q[v] = SELECTED_BUTTON[v];
                 } else {
                     q[v] = BUTTON[v];

@@ -201,6 +201,7 @@ static void AddButton(
     system->size[id] = size;
     system->isSelected[id] = isSelected;
     system->isSelectable[id] = isSelectable;
+    system->present[id] = 1;
     state->entitiesReg->comp[id] |= COMP_BUTTON;
 }
 
