@@ -32,11 +32,18 @@ static Vertex ASTEROID[8] = {
     {{ -1.0f, -0.2f }, {1.f, 1.f, 1.f, 1.0f}, {0.f, 0.f, 1.f}}
 };
 
-static Vertex BUTTON[4] = {
-    {{ -3.0f,  2.0f}, {1.f, 1.f, 1.f, 1.0f},{0.f, 0.f, 1.f} },
-    {{ -3.0f,  -2.0f}, {1.f, 1.f, 1.f, 1.0f}, {0.f, 0.f, 1.f}},
-    {{ 3.0f,  -2.0f}, {1.f, 1.f, 1.f, 1.0f}, {0.f, 0.f, 1.f}},
-    {{ 3.0f,  2.0f}, {1.f, 1.f, 1.f, 1.0f}, {0.f, 0.f, 1.f}},
+static TextVertex SELECTED_BUTTON[4] = {
+    {{-0.5f, 0.5f}, {1,0}, {1,0,0,1}},
+    {{-0.5f,  -0.5f}, {1,0}, {1,0,0,1}},
+    {{ 0.5f, -0.5f}, {1,0}, {1,0,0,1}},
+    {{ 0.5f,  0.5f}, {1,0}, {1,0,0,1}}
+};
+
+static TextVertex BUTTON[4] = {
+    {{-0.5f, 0.5f}, {1,0}, {0,0,1,1}},
+    {{-0.5f,  -0.5f}, {1,0}, {0,0,1,1}},
+    {{ 0.5f, -0.5f}, {1,0}, {0,0,1,1}},
+    {{ 0.5f,  0.5f}, {1,0}, {0,0,1,1}}
 };
 
 typedef struct {
@@ -85,7 +92,7 @@ typedef struct GameState {
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory);
 void GameUpdate(GameState *state, PlatformFrame *frame, PlatformMemory *memory);
-void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame);
+void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame, int width, int height);
 void GameSound(GameState *state, PlatformMemory *memory);
 Entity* CreateEntity(GameState *state, EntityType entity);
 void DestoryEntity(Entity* entity);

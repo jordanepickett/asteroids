@@ -133,6 +133,7 @@ static const char* textFragmentShader =
 "{\n"
 "    float alpha = texture(fontTexture, texCoord).r;\n"  // Sample RED channel
 "    fragment = vec4(color.rgb, color.a * alpha);\n"     // Multiply color by alpha
+"    //fragment = color;\n"     // Multiply color by alpha
 "}\n";
 
 static const char* basePostShader =

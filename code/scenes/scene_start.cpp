@@ -39,8 +39,9 @@ static void onEnter(GameState* state) {
     );
     AddCamera(state, camera, lookAt, cameraPos, true, true);
 
+    // Utilize anchors for raw position with the transform as the offset from that (For buttons -> children (text))
     EntityID start = CreateEntity2(state, {0, 0});
-    AddButton(state, start, { 1, 1 }, true, true);
+    AddButton(state, start, { 150, 50 }, true, true);
     AddText(
         state,
         start,
@@ -49,15 +50,15 @@ static void onEnter(GameState* state) {
         start,
         FIELD_START_GAME
     );
-    EntityID settings = CreateEntity2(state, {0, -10});
-    AddButton(state, settings, { 1, 1 }, true, true);
+    EntityID settings = CreateEntity2(state, {0, 100});
+    AddButton(state, settings, { 150, 50 }, false, true);
     AddText(
         state,
         settings,
         {1,1,1,1},
         CENTER,
         settings,
-        FIELD_START_GAME
+        FIELD_OPEN_SETTINGS
     );
 }
 

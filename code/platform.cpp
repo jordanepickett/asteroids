@@ -161,7 +161,7 @@ void PlatformInit(PlatformRenderer *renderer, PlatformAudio* audio, PlatformMemo
     renderer->particleProgram = particleProgram;
     ParticleShaderInit(renderer->particleProgram, particleShader, particleFragment);
 
-    //Texture Shader
+    //Text Shader
     Program* textProgram = (Program*)ArenaAlloc(&memory->permanent, sizeof(Program));
     renderer->textProgram = textProgram;
     TextShaderInit(renderer, renderer->textProgram, textVertexShader, textFragmentShader);
@@ -456,7 +456,7 @@ void PlatformRunGameLoop(PlatformAPI *api,
 
         // Game Updates
         GameUpdate(game, &frame, &memory);
-        GameRender(game, &memory, &frame);
+        GameRender(game, &memory, &frame, renderer->width, renderer->height);
         GameSound(game, &memory);
 
         PlatformRender(renderer, game->commands, game->renderCommandsCount, game->light, game->transforms);
@@ -495,7 +495,6 @@ static void DrawQuadTextured(
         {{ x0, y1 }, {s0, t1}, { color[0], color[1], color[2], color[3] }}
     };
     
-    glBindBuffer(GL_ARRAY_BUFFER, renderer->textVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_DYNAMIC_DRAW);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 }
@@ -526,19 +525,15 @@ static glm::vec2 GetAnchoredPosition(Anchor anchor, glm::vec2 offset, glm::vec2 
     return basePos + offset;
 }
 
-static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 pos, glm::vec4 color, Anchor anchor, glm::mat4 mvp) {
+static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 pos, glm::vec4 color) {
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
     Font* usedFont = &renderer->fontUI;
-    glUseProgram(renderer->textProgram->program);
-    glBindVertexArray(renderer->textVAO);
     glBindTexture(GL_TEXTURE_2D, usedFont->texture_id);
-    
-    glUniformMatrix4fv(renderer->textProgram->uniformLocations[U_MVP], 1, GL_FALSE, &mvp[0][0]);
 
-    glm::vec2 posOffset = GetAnchoredPosition(anchor, pos, { renderer->width, renderer->height });
+    glm::vec2 posOffset = pos;
     float x = posOffset.x;
     float y = posOffset.y;
     const float col[4] = {color.r, color.g, color.b, color.a};
@@ -564,8 +559,8 @@ static void RenderText(PlatformRenderer *renderer, const char* text, glm::vec2 p
         x += g.xadvance;
     }
     
-    glBindVertexArray(0);
-    glDisable(GL_BLEND);
+    //glBindVertexArray(0);
+    //glDisable(GL_BLEND);
 }
 
 void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, LightSystem* system, TransformSystem* transforms) {
@@ -573,8 +568,10 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
     uint8_t* ptr = (uint8_t*)buffer;
     uint8_t* end = ptr + size;
 
+
     // TODO: Don't use a vector
     std::vector<RenderCommandDrawText*> textCommands;
+    std::vector<RenderCommandBatchUI*> UICommands;
 
     glBindFramebuffer(GL_FRAMEBUFFER, renderer->frameBuffer);
     glViewport(0, 0, INTERNAL_WIDTH, INTERNAL_HEIGHT);
@@ -668,6 +665,28 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
                 auto* t = (RenderCommandDrawText*)ptr;
                 textCommands.push_back(t);
             } break;
+            case RENDER_CMD_BATCH_UI: {
+                auto* t = (RenderCommandBatchUI*)ptr;
+                UICommands.push_back(t);
+                /*
+                auto* t = (RenderCommandBatchUI*)ptr;
+                void* verts = (uint8_t*)t + sizeof(RenderCommandBatchUI);
+                printf("%i", t->vertexCount);
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                glViewport(0, 0, renderer->width, renderer->height);
+                glClear(GL_COLOR_BUFFER_BIT);
+
+                glUseProgram(renderer->vertexProgram->program);
+                glBindVertexArray(renderer->vertexVAO);
+
+                glUniformMatrix4fv(renderer->vertexProgram->uniformLocations[U_MVP],
+                                   1, GL_FALSE, &textMVP[0][0]);
+
+                glBufferData(GL_ARRAY_BUFFER, t->vertexCount * sizeof(Vertex), verts, GL_DYNAMIC_DRAW);
+
+                glDrawArrays(GL_TRIANGLES, 0, t->vertexCount);
+                */
+            } break;
         }
 
         ptr += header->size; // move to next command
@@ -688,12 +707,27 @@ void PlatformRender(PlatformRenderer* renderer, void* buffer, size_t size, Light
     //glBindTexture(GL_TEXTURE_2D, renderer->pingPongTexture[!horizontal]);
     glDrawArrays(GL_TRIANGLES, 0, 6);
 
+
+    // UI Rendering
+
     // Render text to screen size
     glm::mat4 textMVP = glm::ortho(0.0f, (float)renderer->width, 
                                    (float)renderer->height, 0.0f, 
                                    -1.0f, 1.0f);
+
+    glUseProgram(renderer->textProgram->program);
+    glBindVertexArray(renderer->textVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, renderer->textVBO);
+
+    glUniformMatrix4fv(renderer->textProgram->uniformLocations[U_MVP], 1, GL_FALSE, &textMVP[0][0]);
+    for (auto* ui : UICommands) {
+        void* verts = (uint8_t*)ui + sizeof(RenderCommandBatchUI);
+        glBufferData(GL_ARRAY_BUFFER, ui->vertexCount * sizeof(TextVertex), verts, GL_DYNAMIC_DRAW);
+        glDrawArrays(GL_TRIANGLES, 0, ui->vertexCount);
+    }
     for (auto* t : textCommands) {
         const char* str = (char*)t + sizeof(RenderCommandDrawText);
-        RenderText(renderer, str, t->position, t->color, t->anchor, textMVP);
+        RenderText(renderer, str, t->position, t->color);
     }
+
 }

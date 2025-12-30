@@ -19,7 +19,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/gtc/type_ptr.hpp>
 
-inline void PushText(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* str, Anchor anchor) {
+inline void PushText(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* str) {
     size_t len = strlen(str);
     size_t size = sizeof(RenderCommandDrawText) + len + 1;
     auto* cmd = (RenderCommandDrawText*)ArenaAlloc(arena, size);
@@ -28,19 +28,18 @@ inline void PushText(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::v
     cmd->position = pos;
     cmd->color = color;
     cmd->length = (int)len;
-    cmd->anchor = anchor;
     char* dst = (char*)cmd + sizeof(RenderCommandDrawText);
     memcpy(dst, str, len + 1);
 }
 
-static void PushTextf(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::vec4 color, Anchor anchor, const char* fmt, ...) {
+static void PushTextf(GameState* state, MemoryArena* arena, glm::vec2 pos, glm::vec4 color, const char* fmt, ...) {
     char buffer[512];
     va_list args;
     va_start(args, fmt);
     vsnprintf(buffer, sizeof(buffer), fmt, args);
     va_end(args);
     
-    PushText(state, arena, pos, color, buffer, anchor);
+    PushText(state, arena, pos, color, buffer);
 }
 
 inline void PushParticleBatch(
@@ -58,6 +57,21 @@ inline void PushParticleBatch(
     drawCmd->vertexCount = vertexCount;
     void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandBatchParticles);
     memcpy(dst, verts, vertexCount * sizeof(ParticleVertex));
+}
+
+static void PushUIBatch(
+    MemoryArena *memory,
+    TextVertex *verts,
+    int vertexCount
+) {
+
+    size_t size = sizeof(RenderCommandBatchUI) + vertexCount * sizeof(TextVertex); // assuming simple 2D verts
+    auto* drawCmd = (RenderCommandBatchUI*)ArenaAlloc(memory, size);
+    drawCmd->header.type = RENDER_CMD_BATCH_UI;
+    drawCmd->header.size = (uint32_t)size;
+    drawCmd->vertexCount = vertexCount;
+    void* dst = (uint8_t*)drawCmd + sizeof(RenderCommandBatchUI);
+    memcpy(dst, verts, vertexCount * sizeof(TextVertex));
 }
 
 inline void PushTrianges2(
@@ -109,15 +123,19 @@ inline void WrapSystem(GameState* state) {
     float top    =  20.0f;
 
     TransformSystem* transformSystem = state->transforms;
+    uint32_t mask = TAG_ASTEROID | TAG_LASER | TAG_PLAYER;
     for(int i = 0; i < state->entitiesReg->count; i++) {
-        glm::vec2 pos = transformSystem->pos[i];
-        if (pos.x > right)       pos.x = left;
-        else if (pos.x < left)   pos.x = right;
+        if(state->entitiesReg->tag[i] & mask) {
 
-        if (pos.y > top)         pos.y = bottom;
-        else if (pos.y < bottom) pos.y = top;
+            glm::vec2 pos = transformSystem->pos[i];
+            if (pos.x > right)       pos.x = left;
+            else if (pos.x < left)   pos.x = right;
 
-        transformSystem->pos[i] = pos;
+            if (pos.y > top)         pos.y = bottom;
+            else if (pos.y < bottom) pos.y = top;
+
+            transformSystem->pos[i] = pos;
+        }
     }
 
 }
@@ -301,19 +319,109 @@ static void RenderMeshes(GameState *state, PlatformMemory *memory, glm::mat4 cam
     }
 }
 
-static void RenderUI(GameState *state, PlatformMemory *memory, glm::mat4 cameraMvp) {
+static glm::vec2 GetAnchoredPosition(Anchor anchor, glm::vec2 offset, glm::vec2 min, glm::vec2 max) {
+    glm::vec2 basePos = {};
+    glm::vec2 center = (min + max) * 0.5f;
+    /*
+    switch (anchor) {
+        case Anchor::TOP_LEFT:
+            basePos = {0, 0};
+            break;
+        case Anchor::BOTTOM_LEFT:
+            basePos = {0, screenSize.y};
+            offset.y = -offset.y; // Flip Y offset for bottom anchors
+            break;
+        case Anchor::BOTTOM_RIGHT:
+            basePos = {screenSize.x, screenSize.y};
+            offset.x = -offset.x;
+            offset.y = -offset.y;
+            break;
+        case Anchor::TOP_RIGHT:
+            basePos = {screenSize.x, 0};
+            offset.x = -offset.x;
+            break;
+        case Anchor::CENTER:
+            basePos = {screenSize.x * 0.5f, screenSize.y * 0.5f};
+            break;
+    }
+    return basePos + offset;
+    */
+    switch (anchor) {
+        case Anchor::TOP_LEFT:
+            basePos = {min.x, min.y};
+            break;
+        case Anchor::BOTTOM_LEFT:
+            basePos = {min.x, max.y};
+            offset.y = -offset.y; // Flip Y offset for bottom anchors
+            break;
+        case Anchor::BOTTOM_RIGHT:
+            basePos = {max.x, max.y};
+            offset.x = -offset.x;
+            offset.y = -offset.y;
+            break;
+        case Anchor::TOP_RIGHT:
+            basePos = {max.x, min.y};
+            offset.x = -offset.x;
+            break;
+        case Anchor::CENTER:
+            basePos = center;
+            break;
+    }
+    return basePos + offset;
+}
+
+static void RenderUI(GameState *state, PlatformMemory *memory, glm::mat4 cameraMvp, int width, int height) {
     TransformSystem *transformSystem = state->transforms;
     TextSystem *textSystem = state->textSystem;
     ButtonSystem *buttonSystem = state->buttons;
     HealthSystem *healthSystem = state->health;
 
+    int vertexCount = 0;
+    static TextVertex verts[64];
+
     for(int i = 0; i < state->entitiesReg->count; i++) {
+        glm::vec2 min = { 0, 0 };
+        glm::vec2 max = { width, height };
         glm::vec2 pos = transformSystem->pos[i];
+
+        // Buttons
+        if((state->entitiesReg->comp[i] & (COMP_BUTTON))) {
+            glm::vec2 scale = buttonSystem->size[i]; // width/height
+            TextVertex q[4];
+
+            for(int v = 0; v < 4; v++) {
+                if(buttonSystem->isSelected[i]) {
+                    q[v] = SELECTED_BUTTON[v];
+                } else {
+                    q[v] = BUTTON[v];
+                }
+
+                // scale
+                glm::vec2 p = q[v].position * scale;
+                q[v].position = GetAnchoredPosition(CENTER, p + pos, min, max);
+
+                //q[v].position = p + pos;
+
+                //verts[vertexCount++] = out;
+            }
+            verts[vertexCount++] = q[0];
+            verts[vertexCount++] = q[1];
+            verts[vertexCount++] = q[2];
+
+            verts[vertexCount++] = q[0];
+            verts[vertexCount++] = q[2];
+            verts[vertexCount++] = q[3];
+            min = q[1].position;
+            max = q[3].position;
+        }
+
         if((state->entitiesReg->comp[i] & (COMP_TEXT))) {
             glm::vec4 color = textSystem->color[i];
             Anchor anchor = textSystem->anchor[i];
             FieldType field = textSystem->fieldType[i];
             EntityID source = textSystem->source[i];
+            // TODO use an actual offset
+            pos = {-50, 0};
             switch (field) {
                 case FIELD_HEALTH:
                     if(state->entitiesReg->comp[source] & COMP_HEALTH) {
@@ -321,9 +429,8 @@ static void RenderUI(GameState *state, PlatformMemory *memory, glm::mat4 cameraM
                         PushTextf(
                             state,
                             &memory->transient,
-                            pos,
+                            GetAnchoredPosition(anchor, pos, min, max),
                             color,
-                            anchor,
                             "HEALTH: %i",
                             (int)hp
                         );
@@ -335,9 +442,8 @@ static void RenderUI(GameState *state, PlatformMemory *memory, glm::mat4 cameraM
                         PushTextf(
                             state,
                             &memory->transient,
-                            pos,
+                            GetAnchoredPosition(anchor, pos, min, max),
                             color,
-                            anchor,
                             "HEALTH: %f",
                             100.0f
                         );
@@ -346,9 +452,8 @@ static void RenderUI(GameState *state, PlatformMemory *memory, glm::mat4 cameraM
                     PushTextf(
                         state,
                         &memory->transient,
-                        pos,
+                        GetAnchoredPosition(anchor, pos, min, max),
                         color,
-                        anchor,
                         "%s",
                         "Start Game"
                     );
@@ -357,9 +462,8 @@ static void RenderUI(GameState *state, PlatformMemory *memory, glm::mat4 cameraM
                     PushTextf(
                         state,
                         &memory->transient,
-                        pos,
+                        GetAnchoredPosition(anchor, pos, min, max),
                         color,
-                        anchor,
                         "%s",
                         "Settings"
                     );
@@ -367,13 +471,44 @@ static void RenderUI(GameState *state, PlatformMemory *memory, glm::mat4 cameraM
             }
         }
         if((state->entitiesReg->comp[i] & (COMP_BUTTON))) {
-            PushLoop2(cameraMvp, &memory->transient, BUTTON, 4, pos, transformSystem->rot[i]);
+            //PushLoop2(cameraMvp, &memory->transient, BUTTON, 4, pos, transformSystem->rot[i]);
         }
 
     }
+
+    if(vertexCount > 0) {
+        PushUIBatch(&memory->transient, verts, vertexCount);
+    }
+
+    // Debug Render
+
+    glm::vec2 min = { 0, 0 };
+    glm::vec2 max = { width, height };
+    {
+        // TODO: Text
+        //PushTextf(state, &memory->transient, {10, 20}, {1,1,1,1}, TOP_LEFT, "FPS: %f", (1.0f / frame->deltaTime));
+        //size_t size_in_bytes = sizeof(memory->permanent.used);
+        size_t sizeInBytes = memory->permanent.used;
+        double sizeInKB = (sizeInBytes) / 1024.0;
+        double sizeInMB = (sizeInKB) / 1024.0;
+        PushTextf(state, &memory->transient, GetAnchoredPosition(TOP_RIGHT, {300, 20}, min, max), {1,1,1,1}, "perm size: %.2f", sizeInKB);
+    }
+    {
+        size_t sizeInBytes = memory->transient.used;
+        double sizeInKB = (sizeInBytes) / 1024.0;
+        double sizeInMB = (sizeInKB) / 1024.0;
+        PushTextf(state, &memory->transient, GetAnchoredPosition(TOP_RIGHT, {150, 20}, min, max), {1,1,1,1}, "trans size: %.2f", sizeInKB);
+    }
+    {
+        size_t sizeInBytes = memory->sound.used;
+        double sizeInKB = (sizeInBytes) / 1024.0;
+        double sizeInMB = (sizeInKB) / 1024.0;
+        PushTextf(state, &memory->transient, GetAnchoredPosition(BOTTOM_LEFT, {150, 20}, min, max), {1,1,1,1}, "sound size: %f", sizeInKB);
+    }
+
 }
 
-static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFrame* frame, uint32_t renderSystems) {
+static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFrame* frame, uint32_t renderSystems, int width, int height) {
 
     ArenaReset(&memory->transient);
 
@@ -403,7 +538,7 @@ static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFra
     if(renderSystems & SYS_RENDER) {
         // Mesh Render
         RenderMeshes(state, memory, cameraMvp);
-        RenderUI(state, memory, cameraMvp);
+        RenderUI(state, memory, cameraMvp, width, height);
     }
 
 
@@ -426,36 +561,12 @@ static void RenderEntities(GameState *state, PlatformMemory *memory, PlatformFra
         }
     }
 
-    // Debug Render
-
-    {
-        // TODO: Text
-        PushTextf(state, &memory->transient, {10, 20}, {1,1,1,1}, TOP_LEFT, "FPS: %f", (1.0f / frame->deltaTime));
-        //size_t size_in_bytes = sizeof(memory->permanent.used);
-        size_t sizeInBytes = memory->permanent.used;
-        double sizeInKB = (sizeInBytes) / 1024.0;
-        double sizeInMB = (sizeInKB) / 1024.0;
-        PushTextf(state, &memory->transient, {300, 20}, {1,1,1,1}, TOP_RIGHT, "perm size: %.2f", sizeInKB);
-    }
-    {
-        size_t sizeInBytes = memory->transient.used;
-        double sizeInKB = (sizeInBytes) / 1024.0;
-        double sizeInMB = (sizeInKB) / 1024.0;
-        PushTextf(state, &memory->transient, {150, 20}, {1,1,1,1}, TOP_RIGHT, "trans size: %.2f", sizeInKB);
-    }
-    {
-        size_t sizeInBytes = memory->sound.used;
-        double sizeInKB = (sizeInBytes) / 1024.0;
-        double sizeInMB = (sizeInKB) / 1024.0;
-        PushTextf(state, &memory->transient, {150, 20}, {1,1,1,1}, BOTTOM_LEFT, "sound size: %f", sizeInKB);
-    }
-
 
     state->commands = memory->transient.base;
     state->renderCommandsCount = memory->transient.used;
 }
 
-void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) {
+void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame, int width, int height) {
     uint32_t renderSystems = 0;
     SceneStack* stack = &state->sceneStack;
 
@@ -468,7 +579,7 @@ void GameRender(GameState *state, PlatformMemory *memory, PlatformFrame* frame) 
         }
     }
 
-    RenderEntities(state, memory, frame, renderSystems);
+    RenderEntities(state, memory, frame, renderSystems, width, height);
 }
 
 
