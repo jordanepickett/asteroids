@@ -30,6 +30,14 @@ enum FieldType {
 };
 
 typedef enum {
+    BUTTON_QUIT,
+    BUTTON_SETTINGS,
+    BUTTON_MAIN_MENU,
+    BUTTON_PAUSE,
+    BUTTON_START_GAME
+} ButtonBehavior;
+
+typedef enum {
     U_MVP,
     U_MODEL,
     U_NORMAL_MATRIX,

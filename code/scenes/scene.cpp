@@ -36,3 +36,16 @@ Scene* SceneStackTop(GameState *state) {
 
     return state->sceneStack.scenes[state->sceneStack.count - 1];
 }
+
+void SceneStackClear(GameState *state, Scene *scene) {
+    Scene* top = SceneStackTop(state);
+    if(top != nullptr) {
+        top->onExit(state);
+    }
+
+    state->sceneStack.count = 0;
+    if (scene->onEnter) {
+        scene->onEnter(state);
+    }
+    state->sceneStack.scenes[state->sceneStack.count++] = scene;
+}

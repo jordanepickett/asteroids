@@ -30,7 +30,7 @@ static void onEnter(GameState* state) {
     printf("[Pause] Enter\n");
     EntityID start = CreateEntity2(state, {0, 0});
     printf("Pause: %i\n", start);
-    AddButton(state, start, { 1, 1 }, false, false);
+    AddButton(state, start, { 150, 30 }, BUTTON_MAIN_MENU, false);
     AddText(
         state,
         start,
@@ -39,6 +39,8 @@ static void onEnter(GameState* state) {
         start,
         FIELD_START_GAME
     );
+
+    state->buttons->selectedButton = start;
 
     ScenePause.sceneEntities[ScenePause.sceneEntitiesCount++] = start;
 }
@@ -53,14 +55,12 @@ static void onExit(GameState* state) {
 }
 
 static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memory) {
-    if (WasPressed(frame->input.controllers[0].actionRight)) {
+    if (WasPressed(frame->input.controllers[0].start)) {
         printf("[Pause] back scene.\n");
         SceneStackPop(state);
     }
-    // Input polling, menu selection, etc
-    /*
-    if (StartButtonPressed()) {
-        SetScene(state, &Scene_Game);
+
+    if(WasPressed(frame->input.controllers[0].actionDown)) {
+        ButtonPressed(state, state->buttons->behavior[state->buttons->selectedButton]);
     }
-    */
 }

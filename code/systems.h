@@ -50,6 +50,7 @@ typedef struct {
     glm::vec2 size[MAX_ENTITIES];
     bool isSelectable[MAX_ENTITIES];
     bool isSelected[MAX_ENTITIES];
+    ButtonBehavior behavior[MAX_ENTITIES];
     EntityID selectedButton;
     unsigned char present[MAX_ENTITIES];
 } ButtonSystem;

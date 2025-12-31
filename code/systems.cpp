@@ -4,6 +4,7 @@
 #include "game.h"
 #include "input.cpp"
 #include "platform.h"
+#include "ui/button.h"
 #include <glm/gtc/type_ptr.hpp>
 
 static void MovementSystemInit(MovementSystem *m) {
@@ -190,7 +191,7 @@ static void AddButton(
     GameState *state,
     EntityID id,
     glm::vec2 size,
-    bool isSelected,
+    ButtonBehavior behavior,
     bool isSelectable
 ) {
 #ifdef DEBUG
@@ -199,7 +200,7 @@ static void AddButton(
     assert(id >= 0 && id < MAX_ENTITIES);
     ButtonSystem *system = state->buttons;
     system->size[id] = size;
-    system->isSelected[id] = isSelected;
+    system->behavior[id] = behavior;
     system->isSelectable[id] = isSelectable;
     system->present[id] = 1;
     state->entitiesReg->comp[id] |= COMP_BUTTON;

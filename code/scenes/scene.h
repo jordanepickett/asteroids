@@ -24,4 +24,5 @@ typedef struct {
 
 void SceneStackPush(GameState* state, Scene* scene);
 void SceneStackPop(GameState* state);
+void SceneStackClear(GameState* state, Scene* scene);
 Scene* SceneStackTop(GameState* state);

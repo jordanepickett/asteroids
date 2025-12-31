@@ -432,7 +432,16 @@ void PlatformRunGameLoop(PlatformAPI *api,
                 &oldController->leftShoulder,
                 &newController->leftShoulder
             );
-
+            ProcessInputDigitalButton(
+                state.buttons[GLFW_GAMEPAD_BUTTON_START],
+                &oldController->start,
+                &newController->start
+            );
+            ProcessInputDigitalButton(
+                state.buttons[GLFW_GAMEPAD_BUTTON_BACK],
+                &oldController->back,
+                &newController->back
+            );
             //lx = applyDeadzone(state.axes[GLFW_GAMEPAD_AXIS_LEFT_X], 0.25f);
             //ly = applyDeadzone(state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y], 0.25f);
 
@@ -468,6 +477,9 @@ void PlatformRunGameLoop(PlatformAPI *api,
 
         glfwSwapBuffers(window);
         glfwPollEvents();
+        if(!game->isRunning) {
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+        }
     }
 
     StopSound(&music);

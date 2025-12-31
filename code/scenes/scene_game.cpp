@@ -158,12 +158,7 @@ static void onExit(GameState* state) {
 }
 
 static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memory) {
-    if (WasPressed(frame->input.controllers[0].actionRight)) {
-        printf("[Game] next scene.\n");
-        SceneStackPop(state);
-        SceneStackPush(state, &SceneStart);
-    }
-    if (WasPressed(frame->input.controllers[0].actionUp)) {
+    if (WasPressed(frame->input.controllers[0].start)) {
         printf("[Game] pause.\n");
         SceneStackPush(state, &ScenePause);
     }

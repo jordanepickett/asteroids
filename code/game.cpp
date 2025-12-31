@@ -187,6 +187,7 @@ void ClearGameSystems(GameState *state) {
 }
 
 void GameInit(GameState *state, PlatformAPI *platform, PlatformMemory *memory) {
+    state->isRunning = true;
     
     // Systems
     state->entitiesReg = (EntityRegistry*)ArenaAlloc(&memory->permanent, sizeof(EntityRegistry));

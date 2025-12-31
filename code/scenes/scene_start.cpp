@@ -7,6 +7,7 @@
 #include "platform.h"
 #include "scenes/scene.h"
 #include "systems.h"
+#include "ui/button.h"
 
 // Forward declarations (file-local)
 static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memory);
@@ -30,6 +31,7 @@ Scene SceneStart = {
 
 static void onEnter(GameState* state) {
     printf("[Start] Enter\n");
+    ClearGameSystems(state);
     EntityID camera = CreateEntity2(state);
     glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 1.0f);
     glm::mat4 lookAt = glm::lookAt(
@@ -41,7 +43,7 @@ static void onEnter(GameState* state) {
 
     // Utilize anchors for raw position with the transform as the offset from that (For buttons -> children (text))
     EntityID start = CreateEntity2(state, {0, -100});
-    AddButton(state, start, { 150, 30}, true, true);
+    AddButton(state, start, { 150, 30}, BUTTON_START_GAME, true);
     AddText(
         state,
         start,
@@ -51,7 +53,7 @@ static void onEnter(GameState* state) {
         FIELD_START_GAME
     );
     EntityID settings = CreateEntity2(state, {0, -50});
-    AddButton(state, settings, { 150, 30 }, false, true);
+    AddButton(state, settings, { 150, 30 }, BUTTON_QUIT, true);
     AddText(
         state,
         settings,
@@ -62,7 +64,7 @@ static void onEnter(GameState* state) {
     );
 
     EntityID exit = CreateEntity2(state, {0, 0});
-    AddButton(state, exit, { 150, 30 }, false, true);
+    AddButton(state, exit, { 150, 30 }, BUTTON_QUIT, true);
     AddText(
         state,
         exit,
@@ -82,9 +84,7 @@ static void onExit(GameState* state) {
 
 static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memory) {
     if(WasPressed(frame->input.controllers[0].moveDown)) {
-        printf("Move down\n");
         EntityID newButton = state->buttons->selectedButton + 1;
-        printf("new button: %i\n", newButton);
         if(!state->buttons->present[newButton]) {
             for(int i = 0; i < state->entitiesReg->count; i++) {
                 if(state->buttons->present[i]) {
@@ -98,9 +98,7 @@ static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memor
     }
 
     if(WasPressed(frame->input.controllers[0].moveUp)) {
-        printf("Move up\n");
         EntityID newButton = state->buttons->selectedButton - 1;
-        printf("new button: %i\n", newButton);
         if(!state->buttons->present[newButton]) {
             for(int i = state->entitiesReg->count; i > 0; i--) {
                 if(state->buttons->present[i]) {
@@ -113,9 +111,7 @@ static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memor
         }
     }
 
-    if(WasPressed(frame->input.controllers[0].actionDown) && (state->buttons->selectedButton == 1)) {
-        SceneStackPop(state);
-        SceneStackPush(state, &SceneGame);
+    if(WasPressed(frame->input.controllers[0].actionDown)) {
+        ButtonPressed(state, state->buttons->behavior[state->buttons->selectedButton]);
     }
-
 }

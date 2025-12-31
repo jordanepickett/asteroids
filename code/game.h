@@ -33,17 +33,17 @@ static Vertex ASTEROID[8] = {
 };
 
 static TextVertex SELECTED_BUTTON[4] = {
-    {{-0.5f, 0.5f}, {1,0}, {1,0,0,1}},
-    {{-0.5f,  -0.5f}, {1,0}, {1,0,0,1}},
-    {{ 0.5f, -0.5f}, {1,0}, {1,0,0,1}},
-    {{ 0.5f,  0.5f}, {1,0}, {1,0,0,1}}
-};
-
-static TextVertex BUTTON[4] = {
     {{-0.5f, 0.5f}, {1,0}, {0,0,1,1}},
     {{-0.5f,  -0.5f}, {1,0}, {0,0,1,1}},
     {{ 0.5f, -0.5f}, {1,0}, {0,0,1,1}},
     {{ 0.5f,  0.5f}, {1,0}, {0,0,1,1}}
+};
+
+static TextVertex BUTTON[4] = {
+    {{-0.5f, 0.5f}, {1,0}, {0,0,0,1}},
+    {{-0.5f,  -0.5f}, {1,0}, {0,0,0,1}},
+    {{ 0.5f, -0.5f}, {1,0}, {0,0,0,1}},
+    {{ 0.5f,  0.5f}, {1,0}, {0,0,0,1}}
 };
 
 typedef struct {
@@ -59,6 +59,7 @@ struct Camera {
 };
 
 typedef struct GameState {
+    bool isRunning;
     SceneStack sceneStack;
     void* commands;
     int renderCommandsCount;
