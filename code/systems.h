@@ -39,11 +39,22 @@ typedef struct {
 } FireMissleSystem;
 
 typedef struct {
-    glm::vec4 color[20];
-    Anchor anchor[20];
-    EntityID source[20];
-    FieldType fieldType[20];
-    unsigned char present[20];
+    EntityID source;
+    const char* text;
+} TextSource;
+
+typedef struct {
+    EntityID previous;
+    EntityID next;
+} ButtonRelationship;
+
+typedef struct {
+    glm::vec4 color[MAX_ENTITIES];
+    Anchor anchor[MAX_ENTITIES];
+    EntityID source[MAX_ENTITIES];
+    FieldType fieldType[MAX_ENTITIES];
+    TextSource test[MAX_ENTITIES];
+    unsigned char present[MAX_ENTITIES];
 } TextSystem;
 
 typedef struct {
@@ -51,6 +62,7 @@ typedef struct {
     bool isSelectable[MAX_ENTITIES];
     bool isSelected[MAX_ENTITIES];
     ButtonBehavior behavior[MAX_ENTITIES];
+    ButtonRelationship relationship[MAX_ENTITIES];
     EntityID selectedButton;
     unsigned char present[MAX_ENTITIES];
 } ButtonSystem;

@@ -192,6 +192,7 @@ static void AddButton(
     EntityID id,
     glm::vec2 size,
     ButtonBehavior behavior,
+    ButtonRelationship relationship,
     bool isSelectable
 ) {
 #ifdef DEBUG
@@ -201,9 +202,33 @@ static void AddButton(
     ButtonSystem *system = state->buttons;
     system->size[id] = size;
     system->behavior[id] = behavior;
+    system->relationship[id] = relationship;
     system->isSelectable[id] = isSelectable;
     system->present[id] = 1;
     state->entitiesReg->comp[id] |= COMP_BUTTON;
+}
+
+static void AddText(
+    GameState *state,
+    EntityID id,
+    glm::vec4 color,
+    Anchor anchor,
+    EntityID source,
+    TextSource textSource,
+    FieldType fieldType
+) {
+#ifdef DEBUG
+    printf("Adding Text to: %i\n", id);
+#endif
+    assert(id >= 0 && id < MAX_ENTITIES);
+    TextSystem *system = state->textSystem;
+    system->color[id] = color;
+    system->anchor[id] = anchor;
+    system->source[id] = source;
+    system->fieldType[id] = fieldType;
+    system->test[id] = textSource;
+    system->present[id] = 1;
+    state->entitiesReg->comp[id] |= COMP_TEXT;
 }
 
 static void AddText(
@@ -536,6 +561,12 @@ static void LifeTimeUpdate(GameState *state, PlatformFrame *frame) {
 static void RemoveEntityFromSystems(GameState *state, EntityID id) {
 
     {
+        if (state->entitiesReg->comp[id] & COMP_BUTTON) {
+            state->buttons->present[id] = 0;
+        }
+    }
+
+    {
         if (state->entitiesReg->comp[id] & COMP_MOVEMENT) {
             state->movement->present[id] = 0;
         }
@@ -580,6 +611,7 @@ static void CleanupDeadEntities(GameState *state) {
 
             state->entitiesReg->active[entity] = 0;
             state->entitiesReg->comp[entity] = COMP_NONE;
+            RemoveEntityFromSystems(state, entity);
         }
     }
     state->entitiesReg->deleteCount = 0;

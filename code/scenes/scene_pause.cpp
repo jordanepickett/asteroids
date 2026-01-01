@@ -28,20 +28,38 @@ Scene ScenePause = {
 
 static void onEnter(GameState* state) {
     printf("[Pause] Enter\n");
+    EntityID resume = CreateEntity2(state, {0, -50});
     EntityID start = CreateEntity2(state, {0, 0});
-    printf("Pause: %i\n", start);
-    AddButton(state, start, { 150, 30 }, BUTTON_MAIN_MENU, false);
+    TextSource resumeText = { resume, "Resume" };
+    ButtonRelationship resumeRelationship = { start, start };
+    AddButton(state, resume, { 150, 30 }, BUTTON_SCENE_POP, resumeRelationship, false);
+    AddText(
+        state,
+        resume,
+        {1,1,1,1},
+        CENTER,
+        resume,
+        resumeText,
+        FIELD_SOURCE_LITERAL
+    );
+    TextSource startText = { start, "Main Menu" };
+    ButtonRelationship startRelationship = { resume, resume };
+    AddButton(state, start, { 150, 30 }, BUTTON_MAIN_MENU, startRelationship, false);
     AddText(
         state,
         start,
-        {1,0,1,1},
+        {1,1,1,1},
         CENTER,
         start,
-        FIELD_START_GAME
+        startText,
+        FIELD_SOURCE_LITERAL
     );
 
-    state->buttons->selectedButton = start;
+    state->buttons->selectedButton = resume;
+    printf("resume: %i\n", resume);
+    printf("start: %i\n", start);
 
+    ScenePause.sceneEntities[ScenePause.sceneEntitiesCount++] = resume;
     ScenePause.sceneEntities[ScenePause.sceneEntitiesCount++] = start;
 }
 
@@ -59,6 +77,15 @@ static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memor
         printf("[Pause] back scene.\n");
         SceneStackPop(state);
     }
+
+    if(WasPressed(frame->input.controllers[0].moveDown)) {
+        state->buttons->selectedButton = state->buttons->relationship[state->buttons->selectedButton].next;
+    }
+
+    if(WasPressed(frame->input.controllers[0].moveUp)) {
+        state->buttons->selectedButton = state->buttons->relationship[state->buttons->selectedButton].previous;
+    }
+
 
     if(WasPressed(frame->input.controllers[0].actionDown)) {
         ButtonPressed(state, state->buttons->behavior[state->buttons->selectedButton]);

@@ -21,6 +21,9 @@ void ButtonPressed(GameState *state, ButtonBehavior behavior) {
             SceneStackPop(state);
             SceneStackPush(state, &SceneGame);
         } break;
+        case BUTTON_SCENE_POP: {
+            SceneStackPop(state);
+        } break;
         default: {
 
         } break;

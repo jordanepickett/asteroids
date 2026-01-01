@@ -421,6 +421,7 @@ static void RenderUI(GameState *state, PlatformMemory *memory, glm::mat4 cameraM
             Anchor anchor = textSystem->anchor[i];
             FieldType field = textSystem->fieldType[i];
             EntityID source = textSystem->source[i];
+            TextSource test = textSystem->test[i];
             // TODO use an actual offset
             pos = {-50, 0};
             switch (field) {
@@ -467,6 +468,15 @@ static void RenderUI(GameState *state, PlatformMemory *memory, glm::mat4 cameraM
                         color,
                         "%s",
                         "Settings"
+                    );
+                    break;
+                case FIELD_SOURCE_LITERAL:
+                    PushText(
+                        state,
+                        &memory->transient,
+                        GetAnchoredPosition(anchor, pos, min, max),
+                        color,
+                        test.text
                     );
                     break;
             }

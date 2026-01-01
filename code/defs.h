@@ -26,7 +26,8 @@ enum FieldType {
     FIELD_HEALTH,
     FIELD_SPEED,
     FIELD_START_GAME,
-    FIELD_OPEN_SETTINGS
+    FIELD_OPEN_SETTINGS,
+    FIELD_SOURCE_LITERAL
 };
 
 typedef enum {
@@ -34,7 +35,8 @@ typedef enum {
     BUTTON_SETTINGS,
     BUTTON_MAIN_MENU,
     BUTTON_PAUSE,
-    BUTTON_START_GAME
+    BUTTON_START_GAME,
+    BUTTON_SCENE_POP
 } ButtonBehavior;
 
 typedef enum {

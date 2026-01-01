@@ -43,35 +43,45 @@ static void onEnter(GameState* state) {
 
     // Utilize anchors for raw position with the transform as the offset from that (For buttons -> children (text))
     EntityID start = CreateEntity2(state, {0, -100});
-    AddButton(state, start, { 150, 30}, BUTTON_START_GAME, true);
-    AddText(
-        state,
-        start,
-        {1,1,1,1},
-        CENTER,
-        start,
-        FIELD_START_GAME
-    );
     EntityID settings = CreateEntity2(state, {0, -50});
-    AddButton(state, settings, { 150, 30 }, BUTTON_QUIT, true);
+    EntityID exit = CreateEntity2(state, {0, 0});
+
+    TextSource startText = { start, "Start Game" };
+    ButtonRelationship startRelationship = { exit, settings };
+    AddButton(state, start, { 150, 30}, BUTTON_START_GAME, startRelationship, true);
+    AddText(
+        state,
+        start,
+        {1,1,1,1},
+        CENTER,
+        start,
+        startText,
+        FIELD_SOURCE_LITERAL
+    );
+    TextSource settingsText = { settings, "Settings" };
+    ButtonRelationship settingsRelationship = { start, exit };
+    AddButton(state, settings, { 150, 30 }, BUTTON_QUIT, settingsRelationship, true);
     AddText(
         state,
         settings,
         {1,1,1,1},
         CENTER,
         settings,
-        FIELD_OPEN_SETTINGS
+        settingsText,
+        FIELD_SOURCE_LITERAL
     );
 
-    EntityID exit = CreateEntity2(state, {0, 0});
-    AddButton(state, exit, { 150, 30 }, BUTTON_QUIT, true);
+    TextSource exitText = { settings, "Exit" };
+    ButtonRelationship exitRelationship = { settings, start };
+    AddButton(state, exit, { 150, 30 }, BUTTON_QUIT, exitRelationship, true);
     AddText(
         state,
         exit,
         {1,1,1,1},
         CENTER,
         exit,
-        FIELD_OPEN_SETTINGS
+        exitText,
+        FIELD_SOURCE_LITERAL
     );
 
     state->buttons->selectedButton = start;
@@ -84,31 +94,11 @@ static void onExit(GameState* state) {
 
 static void update(GameState* state, PlatformFrame* frame, PlatformMemory* memory) {
     if(WasPressed(frame->input.controllers[0].moveDown)) {
-        EntityID newButton = state->buttons->selectedButton + 1;
-        if(!state->buttons->present[newButton]) {
-            for(int i = 0; i < state->entitiesReg->count; i++) {
-                if(state->buttons->present[i]) {
-                    state->buttons->selectedButton = i;
-                    break;
-                }
-            }
-        } else {
-            state->buttons->selectedButton = newButton;
-        }
+        state->buttons->selectedButton = state->buttons->relationship[state->buttons->selectedButton].next;
     }
 
     if(WasPressed(frame->input.controllers[0].moveUp)) {
-        EntityID newButton = state->buttons->selectedButton - 1;
-        if(!state->buttons->present[newButton]) {
-            for(int i = state->entitiesReg->count; i > 0; i--) {
-                if(state->buttons->present[i]) {
-                    state->buttons->selectedButton = i;
-                    break;
-                }
-            }
-        } else {
-            state->buttons->selectedButton = newButton;
-        }
+        state->buttons->selectedButton = state->buttons->relationship[state->buttons->selectedButton].previous;
     }
 
     if(WasPressed(frame->input.controllers[0].actionDown)) {

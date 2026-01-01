@@ -61,7 +61,7 @@ static void TrySpawnAsteroid(GameState* state) {
             transformSystem->rot[a] = rot;
             AddMovement(state, a, vel);
             AddTag(state, a, TAG_ASTEROID);
-            AddDamage(state, a, 1.0f, TAG_MISSLE);
+            AddDamage(state, a, 1.0f, TAG_MISSLE | TAG_PLAYER);
             AddMesh(state, a, ASTEROID, 8);
             AddFloatable(state, a);
             AddCollision(state, a, 0.5f);
